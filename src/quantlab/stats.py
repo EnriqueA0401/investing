@@ -188,3 +188,11 @@ def walk_forward_selection(excess_daily: pd.DataFrame, min_years: int = 3) -> pd
             }
         )
     return pd.DataFrame(rows).set_index("year")
+
+
+def walk_forward_stitched(excess_daily: pd.DataFrame, min_years: int = 3) -> pd.Series:
+    """Daily excess returns of the 'each year hold last year's Sharpe winner' policy."""
+    wf = walk_forward_selection(excess_daily, min_years)
+    parts = [excess_daily.loc[f"{y}-01-01" : f"{y}-12-31", row.picked] for y, row in wf.iterrows()]
+    out: pd.Series = pd.concat(parts).rename("walk_forward_pick")
+    return out

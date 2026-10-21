@@ -8,10 +8,12 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from quantlab import registry
+from quantlab.analysis import evaluate_study
 from quantlab.config import load_config
 from quantlab.data.quality import data_quality_report
 from quantlab.logging_setup import configure_logging
 from quantlab.pipeline import load_data, run_experiment
+from quantlab.research_run import run_holdout, run_robustness
 from quantlab.study import load_study, run_study
 from quantlab.tracking import TrialLedger
 
@@ -78,6 +80,35 @@ def _cmd_study(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_validate_study(args: argparse.Namespace) -> int:
+    out = Path(args.results)
+    verdict = evaluate_study(out, TrialLedger(Path(args.ledger)), n_boot=args.n_boot)
+    (out / "validation.json").write_text(verdict.to_json())
+    print(verdict.to_json())
+    return 0
+
+
+def _selected(results: Path) -> str:
+    return str(json.loads((results / "validation.json").read_text())["selected"])
+
+
+def _cmd_robustness(args: argparse.Namespace) -> int:
+    study = load_study(args.study)
+    out = run_robustness(study, _selected(study.output_dir), study.output_dir)
+    print(json.dumps(out, indent=2, default=float))
+    return 0
+
+
+def _cmd_holdout(args: argparse.Namespace) -> int:
+    study = load_study(args.study)
+    selected = _selected(study.output_dir)
+    if args.experiment != selected:
+        raise SystemExit(f"pre-registered rule selected {selected}, not {args.experiment}")
+    res = run_holdout(study, selected, args.unlock_holdout, study.output_dir)
+    print(json.dumps(res.metrics, indent=2))
+    return 0
+
+
 def _cmd_trials(args: argparse.Namespace) -> int:
     ledger = TrialLedger(Path(args.ledger))
     print(
@@ -120,6 +151,22 @@ def main(argv: Sequence[str] | None = None) -> int:
     st.add_argument("study")
     st.add_argument("--only", nargs="*", default=None)
     st.set_defaults(func=_cmd_study)
+
+    vs = sub.add_parser("validate-study", help="apply pre-registered acceptance criteria")
+    vs.add_argument("--results", default="research/results/study")
+    vs.add_argument("--ledger", default="research/trials.jsonl")
+    vs.add_argument("--n-boot", type=int, default=10_000)
+    vs.set_defaults(func=_cmd_validate_study)
+
+    rb = sub.add_parser("robustness", help="post-selection robustness on the research window")
+    rb.add_argument("study")
+    rb.set_defaults(func=_cmd_robustness)
+
+    ho = sub.add_parser("holdout", help="THE single holdout evaluation of the selected config")
+    ho.add_argument("study")
+    ho.add_argument("--experiment", required=True)
+    ho.add_argument("--unlock-holdout", required=True, metavar="REASON")
+    ho.set_defaults(func=_cmd_holdout)
 
     t = sub.add_parser("trials", help="multiple-testing trial counts from the ledger")
     t.add_argument("--ledger", default="research/trials.jsonl")

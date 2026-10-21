@@ -1,0 +1,441 @@
+{
+  "n_trials": 15,
+  "pbo": 0.5988344988344988,
+  "pbo_prob_oos_loss": 0.024941724941724943,
+  "pbo_median_oos_sharpe_of_is_best": 0.547708892712087,
+  "candidates": {
+    "B-EW": {
+      "sharpe": 0.42745543057326774,
+      "dsr": 0.8670212259571327,
+      "dsr_hurdle_annual": 0.16342370839458625,
+      "diff_vs_ew": 0.0,
+      "p_vs_ew": 1.0,
+      "ci_vs_ew": [
+        0.0,
+        0.0
+      ],
+      "subperiod_sharpes": {
+        "2005-2009": 0.30538185432585585,
+        "2010-2014": 0.8136584170302783,
+        "2015-2019": 0.6841403635425989,
+        "2020-2022": 0.08339009638114744
+      },
+      "n_positive_subperiods": 4,
+      "passes_dsr": false,
+      "passes_vs_ew": false,
+      "passes_stability": true,
+      "passes_individual": false
+    },
+    "H1-TS6": {
+      "sharpe": 0.6003604273367303,
+      "dsr": 0.9655158535951596,
+      "dsr_hurdle_annual": 0.16342370839458625,
+      "diff_vs_ew": 0.2659085786763045,
+      "p_vs_ew": 0.1080891910808919,
+      "ci_vs_ew": [
+        -0.20633138980415264,
+        0.723274025473402
+      ],
+      "subperiod_sharpes": {
+        "2005-2009": 0.8590285671525083,
+        "2010-2014": 0.6121229336912544,
+        "2015-2019": 0.5484153497343053,
+        "2020-2022": 0.2510816588541697
+      },
+      "n_positive_subperiods": 4,
+      "passes_dsr": true,
+      "passes_vs_ew": false,
+      "passes_stability": true,
+      "passes_individual": false
+    },
+    "H1-TS12": {
+      "sharpe": 0.5526868623152323,
+      "dsr": 0.9484941107440062,
+      "dsr_hurdle_annual": 0.16342370839458625,
+      "diff_vs_ew": 0.20120638787333292,
+      "p_vs_ew": 0.1434856514348565,
+      "ci_vs_ew": [
+        -0.243939127051132,
+        0.5900199059797132
+      ],
+      "subperiod_sharpes": {
+        "2005-2009": 0.7157955532638886,
+        "2010-2014": 0.7252174606452262,
+        "2015-2019": 0.3640550072173899,
+        "2020-2022": 0.20130273778951416
+      },
+      "n_positive_subperiods": 4,
+      "passes_dsr": false,
+      "passes_vs_ew": false,
+      "passes_stability": true,
+      "passes_individual": false
+    },
+    "H2-XS12": {
+      "sharpe": 0.47338038349981393,
+      "dsr": 0.9031682215038332,
+      "dsr_hurdle_annual": 0.16342370839458625,
+      "diff_vs_ew": 0.07846765206964015,
+      "p_vs_ew": 0.31516848315168483,
+      "ci_vs_ew": [
+        -0.34045388133316046,
+        0.4613342516324805
+      ],
+      "subperiod_sharpes": {
+        "2005-2009": 0.6451312912282346,
+        "2010-2014": 0.6686304576473151,
+        "2015-2019": 0.5361763748004409,
+        "2020-2022": -0.16363708644726657
+      },
+      "n_positive_subperiods": 3,
+      "passes_dsr": false,
+      "passes_vs_ew": false,
+      "passes_stability": true,
+      "passes_individual": false
+    },
+    "H2-XS6": {
+      "sharpe": 0.4518517629964999,
+      "dsr": 0.884684630435334,
+      "dsr_hurdle_annual": 0.16342370839458625,
+      "diff_vs_ew": 0.057545792521752556,
+      "p_vs_ew": 0.35976402359764026,
+      "ci_vs_ew": [
+        -0.35796270326125335,
+        0.4192398222356143
+      ],
+      "subperiod_sharpes": {
+        "2005-2009": 0.5781912061303862,
+        "2010-2014": 0.8478418236071217,
+        "2015-2019": 0.3671217118677302,
+        "2020-2022": -0.03282073826496144
+      },
+      "n_positive_subperiods": 3,
+      "passes_dsr": false,
+      "passes_vs_ew": false,
+      "passes_stability": true,
+      "passes_individual": false
+    },
+    "H2-XS12-RMV": {
+      "sharpe": 0.4740705232804008,
+      "dsr": 0.9033222109996635,
+      "dsr_hurdle_annual": 0.16342370839458625,
+      "diff_vs_ew": -0.013940504791224918,
+      "p_vs_ew": 0.5397460253974603,
+      "ci_vs_ew": [
+        -0.3516689080943819,
+        0.3087965738819504
+      ],
+      "subperiod_sharpes": {
+        "2005-2009": 0.375968899895663,
+        "2010-2014": 1.4408233080950388,
+        "2015-2019": 0.5430526922281216,
+        "2020-2022": -0.2862708522894263
+      },
+      "n_positive_subperiods": 3,
+      "passes_dsr": false,
+      "passes_vs_ew": false,
+      "passes_stability": true,
+      "passes_individual": false
+    },
+    "H3-IV": {
+      "sharpe": 0.47994582837484845,
+      "dsr": 0.9078219685303648,
+      "dsr_hurdle_annual": 0.16342370839458625,
+      "diff_vs_ew": -7.155174545820747e-06,
+      "p_vs_ew": 0.514048595140486,
+      "ci_vs_ew": [
+        -0.2059190968486617,
+        0.19847424526848267
+      ],
+      "subperiod_sharpes": {
+        "2005-2009": 0.39095654448067924,
+        "2010-2014": 1.2045447215464744,
+        "2015-2019": 0.8274336998666,
+        "2020-2022": -0.20797519901386488
+      },
+      "n_positive_subperiods": 3,
+      "passes_dsr": false,
+      "passes_vs_ew": false,
+      "passes_stability": true,
+      "passes_individual": false
+    },
+    "H3-ERC": {
+      "sharpe": 0.469753394430882,
+      "dsr": 0.9007416281368245,
+      "dsr_hurdle_annual": 0.16342370839458625,
+      "diff_vs_ew": -0.015401840433329298,
+      "p_vs_ew": 0.5627437256274372,
+      "ci_vs_ew": [
+        -0.25354403778118484,
+        0.2183981186437564
+      ],
+      "subperiod_sharpes": {
+        "2005-2009": 0.41049852918271257,
+        "2010-2014": 1.165348484796532,
+        "2015-2019": 0.7899787693174672,
+        "2020-2022": -0.2326423457064072
+      },
+      "n_positive_subperiods": 3,
+      "passes_dsr": false,
+      "passes_vs_ew": false,
+      "passes_stability": true,
+      "passes_individual": false
+    },
+    "H3-HRP": {
+      "sharpe": 0.4153649085359572,
+      "dsr": 0.8534759629759695,
+      "dsr_hurdle_annual": 0.16342370839458625,
+      "diff_vs_ew": -0.06777263811244079,
+      "p_vs_ew": 0.6472352764723528,
+      "ci_vs_ew": [
+        -0.4062163008795971,
+        0.2601431717565367
+      ],
+      "subperiod_sharpes": {
+        "2005-2009": 0.3766387605744382,
+        "2010-2014": 1.2305914341395203,
+        "2015-2019": 0.8586571961987717,
+        "2020-2022": -0.42779209650402583
+      },
+      "n_positive_subperiods": 3,
+      "passes_dsr": false,
+      "passes_vs_ew": false,
+      "passes_stability": true,
+      "passes_individual": false
+    },
+    "H3-MV": {
+      "sharpe": 0.3778870230847864,
+      "dsr": 0.8163905590668405,
+      "dsr_hurdle_annual": 0.16342370839458625,
+      "diff_vs_ew": -0.1145525667784886,
+      "p_vs_ew": 0.7504249575042495,
+      "ci_vs_ew": [
+        -0.46107246168212535,
+        0.2179289366009945
+      ],
+      "subperiod_sharpes": {
+        "2005-2009": 0.21649498558810676,
+        "2010-2014": 1.2606600353320314,
+        "2015-2019": 0.7888485712167858,
+        "2020-2022": -0.4424297694741576
+      },
+      "n_positive_subperiods": 3,
+      "passes_dsr": false,
+      "passes_vs_ew": false,
+      "passes_stability": true,
+      "passes_individual": false
+    },
+    "H4-IV-TS12": {
+      "sharpe": 0.6564815386417918,
+      "dsr": 0.9792700978553979,
+      "dsr_hurdle_annual": 0.16342370839458625,
+      "diff_vs_ew": 0.25446944719643305,
+      "p_vs_ew": 0.0948905109489051,
+      "ci_vs_ew": [
+        -0.19541639465835453,
+        0.6435119344369362
+      ],
+      "subperiod_sharpes": {
+        "2005-2009": 0.6625577776777866,
+        "2010-2014": 1.164376276564091,
+        "2015-2019": 0.5811909262660032,
+        "2020-2022": 0.05082012776962521
+      },
+      "n_positive_subperiods": 4,
+      "passes_dsr": true,
+      "passes_vs_ew": false,
+      "passes_stability": true,
+      "passes_individual": false
+    },
+    "H4-ERC-TS12": {
+      "sharpe": 0.620503345141064,
+      "dsr": 0.9717160283868141,
+      "dsr_hurdle_annual": 0.16342370839458625,
+      "diff_vs_ew": 0.20257854662691813,
+      "p_vs_ew": 0.1625837416258374,
+      "ci_vs_ew": [
+        -0.29249275960593696,
+        0.6212743944722803
+      ],
+      "subperiod_sharpes": {
+        "2005-2009": 0.6348295583157266,
+        "2010-2014": 1.1167391904173014,
+        "2015-2019": 0.4872982174353961,
+        "2020-2022": 0.06301359069680788
+      },
+      "n_positive_subperiods": 4,
+      "passes_dsr": true,
+      "passes_vs_ew": false,
+      "passes_stability": true,
+      "passes_individual": false
+    },
+    "H5-EW-VT": {
+      "sharpe": 0.42341920397851945,
+      "dsr": 0.8615269306941228,
+      "dsr_hurdle_annual": 0.16342370839458625,
+      "diff_vs_ew": 0.005428618936271651,
+      "p_vs_ew": 0.43045695430456954,
+      "ci_vs_ew": [
+        -0.17030136428247286,
+        0.1554468670268971
+      ],
+      "subperiod_sharpes": {
+        "2005-2009": 0.3808796044350159,
+        "2010-2014": 0.7903114541408481,
+        "2015-2019": 0.6841405467826961,
+        "2020-2022": -0.1637794589423269
+      },
+      "n_positive_subperiods": 3,
+      "passes_dsr": false,
+      "passes_vs_ew": false,
+      "passes_stability": true,
+      "passes_individual": false
+    },
+    "H6-COMBO": {
+      "sharpe": 0.4991710682438248,
+      "dsr": 0.9191670226781918,
+      "dsr_hurdle_annual": 0.16342370839458625,
+      "diff_vs_ew": 0.1298684971880508,
+      "p_vs_ew": 0.264973502649735,
+      "ci_vs_ew": [
+        -0.3436006443947283,
+        0.5842192581377577
+      ],
+      "subperiod_sharpes": {
+        "2005-2009": 0.7289394868080328,
+        "2010-2014": 0.7063759425316333,
+        "2015-2019": 0.5609299858869848,
+        "2020-2022": -0.12051119096210831
+      },
+      "n_positive_subperiods": 3,
+      "passes_dsr": false,
+      "passes_vs_ew": false,
+      "passes_stability": true,
+      "passes_individual": false
+    },
+    "H6-RIDGE": {
+      "sharpe": 0.3163334755913005,
+      "dsr": 0.7390341564216634,
+      "dsr_hurdle_annual": 0.16342370839458625,
+      "diff_vs_ew": -0.09577329331126781,
+      "p_vs_ew": 0.6413358664133587,
+      "ci_vs_ew": [
+        -0.5273779297117508,
+        0.29701042685772244
+      ],
+      "subperiod_sharpes": {
+        "2005-2009": 0.4046849480960494,
+        "2010-2014": 0.5450160752017897,
+        "2015-2019": 0.20667538483458958,
+        "2020-2022": 0.08958368512007205
+      },
+      "n_positive_subperiods": 4,
+      "passes_dsr": false,
+      "passes_vs_ew": false,
+      "passes_stability": true,
+      "passes_individual": false
+    }
+  },
+  "walk_forward": [
+    {
+      "year": 2008,
+      "picked": "H1-TS12",
+      "picked_return": -0.009914172015847544,
+      "median_candidate_return": -0.011771715564401264
+    },
+    {
+      "year": 2009,
+      "picked": "H4-ERC-TS12",
+      "picked_return": -0.003240403687255866,
+      "median_candidate_return": 0.04996181783813025
+    },
+    {
+      "year": 2010,
+      "picked": "H1-TS6",
+      "picked_return": 0.040183310855040455,
+      "median_candidate_return": 0.08702153824118009
+    },
+    {
+      "year": 2011,
+      "picked": "H4-IV-TS12",
+      "picked_return": 0.03878996570174276,
+      "median_candidate_return": 0.03878996570174276
+    },
+    {
+      "year": 2012,
+      "picked": "H4-IV-TS12",
+      "picked_return": 0.05794385499680588,
+      "median_candidate_return": 0.06870164835199644
+    },
+    {
+      "year": 2013,
+      "picked": "H4-IV-TS12",
+      "picked_return": 0.020968446808022456,
+      "median_candidate_return": 0.032977450993805446
+    },
+    {
+      "year": 2014,
+      "picked": "H4-IV-TS12",
+      "picked_return": 0.01591796665375944,
+      "median_candidate_return": 0.03005601288251758
+    },
+    {
+      "year": 2015,
+      "picked": "H4-IV-TS12",
+      "picked_return": -0.006905529414635736,
+      "median_candidate_return": -0.02136870525819512
+    },
+    {
+      "year": 2016,
+      "picked": "H4-IV-TS12",
+      "picked_return": 0.006058378074748738,
+      "median_candidate_return": 0.04530395080641081
+    },
+    {
+      "year": 2017,
+      "picked": "H4-IV-TS12",
+      "picked_return": 0.06171738323632092,
+      "median_candidate_return": 0.08970336953231706
+    },
+    {
+      "year": 2018,
+      "picked": "H4-IV-TS12",
+      "picked_return": -0.03370694852640599,
+      "median_candidate_return": -0.04324547687414859
+    },
+    {
+      "year": 2019,
+      "picked": "H4-IV-TS12",
+      "picked_return": 0.05482121303593157,
+      "median_candidate_return": 0.09802246345795473
+    },
+    {
+      "year": 2020,
+      "picked": "H4-IV-TS12",
+      "picked_return": 0.010877241579718255,
+      "median_candidate_return": 0.019234774671507138
+    },
+    {
+      "year": 2021,
+      "picked": "H4-IV-TS12",
+      "picked_return": 0.02428974274248974,
+      "median_candidate_return": 0.06170597550483392
+    },
+    {
+      "year": 2022,
+      "picked": "H4-IV-TS12",
+      "picked_return": -0.030574712166541618,
+      "median_candidate_return": -0.12999631356671115
+    }
+  ],
+  "walk_forward_summary": {
+    "sharpe_walk_forward_pick": 0.41764045306211417,
+    "sharpe_ew_same_window": 0.36776791907534745,
+    "sharpe_equal_blend_of_candidates": 0.47262391525788006,
+    "mean_picked_return": 0.016481715858259565,
+    "mean_median_candidate_return": 0.027673117114596007,
+    "share_years_picked_beats_median": 0.26666666666666666
+  },
+  "validated": [],
+  "selected": "H4-IV-TS12",
+  "selected_is_validated": false
+}

@@ -1,4 +1,5 @@
 # Hooks run through `uv run` so tool versions come from uv.lock (single source of truth).
+exclude: ^(data/snapshots/|research/results/)
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
