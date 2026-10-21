@@ -141,3 +141,60 @@ Para B-EW: costes, lag, trimestral, AUM y tope de turnover.
 
 Todas estas variantes quedan en el ledger. No son candidatas: el DSR de la
 selección usa N = 15. Como sensibilidad, también se reporta con N = total del ledger.
+
+## 2026-10-21 — Fase 6: robustez (ventana research, antes de abrir el holdout)
+
+H4-IV-TS12, candidato seleccionado pero no validado:
+- **Parámetros:** Sharpe entre 0.56 y 0.72 en las 12 combinaciones de lookback de
+  tendencia × ventana de vol. Todas superan a EW (0.43). La original (252/63)
+  queda en la mitad del rango; no es un pico aislado.
+- **Costes:** ×2 → 0.64, ×3 → 0.63, ×5 → 0.60.
+- **Ejecución:** lag de 2 días → 0.66; de 5 días → 0.63.
+- **Rebalanceo trimestral:** 0.50, con drawdown de −14%. Es el punto más débil.
+- **Capacidad:** con 1e10 USD el Sharpe es 0.60 y el coste 0.24%/año. No hay
+  límite de capacidad relevante para el mandato.
+- **Tope de turnover del 10%:** 0.68, con turnover anual 0.74.
+
+Test contra filtros aleatorios con el mismo número de activos apagados por mes
+(2000 simulaciones, mensual, bruto):
+- Sharpe observado 0.72, frente a una media aleatoria de 0.57 (p95 0.67).
+  **p = 0.0075**: la elección del filtro de tendencia aporta información.
+- Sesgo: el test se hizo sobre el candidato seleccionado por mayor DSR, así que
+  es optimista.
+
+Exposiciones (OLS mensual con Newey-West sobre los factores equity, duration,
+credit, commodity y gold):
+- H4-IV-TS12: **alfa +0.71%/año, t = 1.21 (no significativo)**, R² 0.56. Su
+  ventaja se explica sobre todo por una exposición defensiva y dinámica, no por
+  alfa independiente.
+- B-EW: alfa −1.6%/año (t = −3.3) frente a esos mismos factores.
+- 60/40: alfa 0.0.
+
+Stress histórico (research):
+
+| Episodio | H4 | EW | 60/40 |
+|---|---|---|---|
+| GFC | +5.3% | −29.8% | −35.1% |
+| COVID | −6.9% | −18.3% | −21.2% |
+| 2022 | −1.9% | −19.9% | −20.4% |
+
+La protección es real, pero se paga con menor retorno en todos los regímenes:
+CAGR 3.5% frente a 5.2% (EW) y 6.8% (60/40).
+
+**H-006, diagnóstico ML:**
+- CPCV (6 grupos, k = 2, purga + embargo 21d): IC de ridge 0.046 frente a 0.022
+  de la combinación simple, con ridge ganando en 5 de 5 caminos. Por el criterio
+  pre-registrado, la tesis escéptica queda **refutada a nivel de IC**.
+- El walk-forward con solo pasado (el despliegue real) **no lo confirma**: IC de
+  ridge 0.020 frente a 0.017, con t de la diferencia 0.07. Los coeficientes
+  cambian de signo entre 3 y 6 veces.
+- Conclusión: la ventaja en CPCV viene de entrenar con bloques posteriores al de
+  test (información de régimen). No es desplegable, y ML no se adopta.
+- Lección metodológica: el CPCV sirve para medir la dispersión del rendimiento,
+  pero en series con no-estacionariedad hay que contrastarlo con un walk-forward
+  estricto.
+
+Trials en el ledger tras la robustez: 49 (15 de selección + 34 de robustez).
+
+**Siguiente paso:** abrir el holdout una única vez para H4-IV-TS12, con B-EW y el
+60/40 calculados en la misma corrida.

@@ -94,7 +94,7 @@ def run_robustness(study: Study, selected: str, out_root: Path) -> dict[str, Any
     streams = {
         selected: sel_run.strategy.net_returns,
         "B-EW": sel_run.baseline.net_returns,
-        "60/40": sel_run.benchmark.net_returns,
+        "60-40": sel_run.benchmark.net_returns,
     }
     risk_pack(streams, research, out, "research_")
     return {"random_filter_null": null, "ml_cpcv": ml}
@@ -112,14 +112,14 @@ def run_holdout(study: Study, selected: str, reason: str, out_root: Path) -> Exp
         {
             selected: res.strategy.net_returns,
             "B-EW": res.baseline.net_returns,
-            "60/40": res.benchmark.net_returns,
+            "60-40": res.benchmark.net_returns,
             "cash": res.strategy.cash_returns,
         }
     ).to_parquet(out / "returns_net.parquet")
     streams = {
         selected: res.strategy.net_returns,
         "B-EW": res.baseline.net_returns,
-        "60/40": res.benchmark.net_returns,
+        "60-40": res.benchmark.net_returns,
     }
     risk_pack(streams, data, out, "holdout_")
     return res

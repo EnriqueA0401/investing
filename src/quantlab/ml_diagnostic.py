@@ -104,3 +104,45 @@ def cpcv_ic(
         "n_samples": len(panel),
         "n_months": int(panel["t0"].nunique()),
     }
+
+
+def walk_forward_ic(
+    panel: pd.DataFrame, signs: dict[str, float], *, alpha: float = 1.0, min_train_months: int = 36
+) -> dict[str, Any]:
+    """Expanding-window IC: the model at month s is trained only on labels ending <= s.
+
+    Reconciles CPCV (which may train on data *after* the test block) with the
+    deployable, past-only setting used in the H6-RIDGE backtest."""
+    feats = list(signs)
+    months = np.sort(panel["t0"].unique())
+    combo_all = (panel[feats] * pd.Series(signs)).mean(axis=1)
+    rows = []
+    for s in months[min_train_months:]:
+        train = panel[panel["t1"] <= s]
+        test = panel[panel["t0"] == s]
+        xt, yt = train[feats].to_numpy(), train["label"].to_numpy()
+        beta = np.linalg.solve(xt.T @ xt + alpha * np.eye(len(feats)), xt.T @ yt)
+        ic_r = st.spearmanr(test[feats].to_numpy() @ beta, test["label"]).statistic
+        ic_c = st.spearmanr(combo_all.loc[test.index], test["label"]).statistic
+        rows.append(
+            {
+                "t0": s,
+                "ic_ridge": float(ic_r),
+                "ic_combo": float(ic_c),
+                **dict(zip(feats, beta, strict=True)),
+            }
+        )
+    df = pd.DataFrame(rows).set_index("t0")
+    return {
+        "mean_ic_ridge": float(df["ic_ridge"].mean()),
+        "mean_ic_combo": float(df["ic_combo"].mean()),
+        "t_stat_ic_diff": float(
+            (df["ic_ridge"] - df["ic_combo"]).mean()
+            / (df["ic_ridge"] - df["ic_combo"]).std(ddof=1)
+            * np.sqrt(len(df))
+        ),
+        "n_months": len(df),
+        "coef_first": {f: float(df[f].iloc[0]) for f in feats},
+        "coef_last": {f: float(df[f].iloc[-1]) for f in feats},
+        "coef_sign_flips": {f: int((np.diff(np.sign(df[f])) != 0).sum()) for f in feats},
+    }
