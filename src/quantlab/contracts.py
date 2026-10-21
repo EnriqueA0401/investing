@@ -85,6 +85,11 @@ class Factor(Component, ABC):
 
     hypothesis_id: ClassVar[str]
 
+    @property
+    def label(self) -> str:
+        """Key under which the panel is exposed in ``DecisionContext.features``."""
+        return str(getattr(self.params, "label", type(self).__name__))
+
     @abstractmethod
     def compute(self, history: MarketData) -> pd.DataFrame:
         """Dates x tickers panel. Row ``d`` may use only rows <= ``d`` of ``history``."""
@@ -118,6 +123,8 @@ class DecisionContext:
     constraints: PortfolioConstraints
     rng: np.random.Generator
     features: Mapping[str, pd.DataFrame] = field(default_factory=dict)
+    current_weights: pd.Series = field(default_factory=lambda: pd.Series(dtype=float))
+    """Holdings at ``as_of`` close: previous target drifted with prices (pre-trade)."""
 
     def __post_init__(self) -> None:
         if self.history.end > self.as_of:

@@ -1,0 +1,102 @@
+# Pre-registered candidate set — docs/hypotheses/STUDY_PLAN.md §3.
+# Adding an entry here REQUIRES registering it in STUDY_PLAN.md first; every
+# entry that runs is counted in research/trials.jsonl (multiple testing).
+base: base.yaml
+output_dir: ../research/results/study
+
+factor_sets:
+  tsmom_6: &tsmom_6 {name: excess_momentum, params: {label: tsmom_6, lookback_days: 126}}
+  tsmom_12: &tsmom_12 {name: excess_momentum, params: {label: tsmom_12, lookback_days: 252}}
+  mom_12_1: &mom_12_1 {name: momentum, params: {label: mom_12_1, lookback_days: 252, skip_days: 21}}
+  mom_6_1: &mom_6_1 {name: momentum, params: {label: mom_6_1, lookback_days: 126, skip_days: 21}}
+  rev_1m: &rev_1m {name: momentum, params: {label: rev_1m, lookback_days: 21, skip_days: 0}}
+  vol_63: &vol_63 {name: realized_vol, params: {label: vol_63, window_days: 63}}
+
+ml_features: &ml_features {mom_12_1: 1.0, mom_6_1: 1.0, rev_1m: -1.0, vol_63: -1.0, tsmom_12: 1.0}
+
+experiments:
+  B-EW:
+    hypothesis_ids: [BASELINE]
+    pipeline: {signal: {name: uniform}, portfolio: {name: equal_weight}}
+
+  H1-TS6:
+    hypothesis_ids: [H-001]
+    pipeline:
+      factors: [*tsmom_6]
+      signal: {name: uniform}
+      portfolio: {name: equal_weight}
+      risk: [{name: trend_filter, params: {feature: tsmom_6}}]
+  H1-TS12:
+    hypothesis_ids: [H-001]
+    pipeline:
+      factors: [*tsmom_12]
+      signal: {name: uniform}
+      portfolio: {name: equal_weight}
+      risk: [{name: trend_filter, params: {feature: tsmom_12}}]
+
+  H2-XS12:
+    hypothesis_ids: [H-002]
+    pipeline:
+      factors: [*mom_12_1]
+      signal: {name: top_n, params: {feature: mom_12_1, n: 6}}
+      portfolio: {name: equal_weight}
+  H2-XS6:
+    hypothesis_ids: [H-002]
+    pipeline:
+      factors: [*mom_6_1]
+      signal: {name: top_n, params: {feature: mom_6_1, n: 6}}
+      portfolio: {name: equal_weight}
+  H2-XS12-RMV:
+    hypothesis_ids: [H-002]
+    pipeline:
+      factors: [*mom_12_1]
+      signal: {name: feature_score, params: {feature: mom_12_1}}
+      portfolio: {name: robust_mean_variance, params: {information_coefficient: 0.05, risk_aversion: 10.0}}
+
+  H3-IV:
+    hypothesis_ids: [H-003]
+    pipeline: {signal: {name: uniform}, portfolio: {name: inverse_vol}}
+  H3-ERC:
+    hypothesis_ids: [H-003]
+    pipeline: {signal: {name: uniform}, portfolio: {name: erc}}
+  H3-HRP:
+    hypothesis_ids: [H-003]
+    pipeline: {signal: {name: uniform}, portfolio: {name: hrp}}
+  H3-MV:
+    hypothesis_ids: [H-003]
+    pipeline: {signal: {name: uniform}, portfolio: {name: min_variance}}
+
+  H4-IV-TS12:
+    hypothesis_ids: [H-004, H-001, H-003]
+    pipeline:
+      factors: [*tsmom_12]
+      signal: {name: uniform}
+      portfolio: {name: inverse_vol}
+      risk: [{name: trend_filter, params: {feature: tsmom_12}}]
+  H4-ERC-TS12:
+    hypothesis_ids: [H-004, H-001, H-003]
+    pipeline:
+      factors: [*tsmom_12]
+      signal: {name: uniform}
+      portfolio: {name: erc}
+      risk: [{name: trend_filter, params: {feature: tsmom_12}}]
+
+  H5-EW-VT:
+    hypothesis_ids: [H-005]
+    pipeline:
+      signal: {name: uniform}
+      portfolio: {name: equal_weight}
+      risk: [{name: vol_target, params: {target_vol: 0.10, window_days: 63}}]
+
+  H6-COMBO:
+    hypothesis_ids: [H-006]
+    pipeline:
+      factors: [*mom_12_1, *mom_6_1, *rev_1m, *vol_63, *tsmom_12]
+      signal: {name: zscore_combo_top_n, params: {features: *ml_features, n: 6}}
+      portfolio: {name: equal_weight}
+  H6-RIDGE:
+    hypothesis_ids: [H-006]
+    pipeline:
+      factors: [*mom_12_1, *mom_6_1, *rev_1m, *vol_63, *tsmom_12]
+      signal: {name: ridge_top_n, params: {features: *ml_features, n: 6, alpha: 1.0, min_train_months: 36}}
+      portfolio: {name: equal_weight}

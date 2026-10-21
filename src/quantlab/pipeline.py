@@ -44,6 +44,9 @@ from quantlab.tracking import RunTracker, Stage
 log = get_logger(__name__)
 
 
+BASELINE_KEYS = ("cagr", "vol", "sharpe", "sortino", "max_drawdown", "turnover_annual")
+
+
 class DataValidationError(RuntimeError):
     def __init__(self, issues: list[ValidationIssue]) -> None:
         self.issues = issues
@@ -85,6 +88,7 @@ class ExperimentResult:
     metrics: dict[str, float]
     strategy: BacktestResult
     benchmark: BacktestResult
+    baseline: BacktestResult
     issues: list[ValidationIssue] = field(default_factory=list)
 
 
@@ -130,16 +134,20 @@ def generate_targets(
     schedule = schedule[schedule >= start]
     targets: dict[pd.Timestamp, pd.Series] = {}
     prev = pd.Series(dtype=float)
+    prev_t: pd.Timestamp | None = None
+    tradable = set(config.universe.tradable_tickers)
     for ts in schedule:
         t = pd.Timestamp(ts)
         hist = data.asof(t)
-        investable = hist.investable(config.universe.min_history_days)
+        investable = [a for a in hist.investable(config.universe.min_history_days) if a in tradable]
         features: dict[str, pd.DataFrame] = {}
         for f in factors:
             panel = f.compute(hist)
             if panel.index.max() > t:
-                raise RuntimeError(f"factor {type(f).__name__} emitted rows after {t.date()}")
-            features[type(f).__name__] = panel
+                raise RuntimeError(f"factor {f.label} emitted rows after {t.date()}")
+            if f.label in features:
+                raise ValueError(f"duplicate factor label '{f.label}'")
+            features[f.label] = panel
         ctx = DecisionContext(
             as_of=t,
             history=hist,
@@ -148,14 +156,32 @@ def generate_targets(
             constraints=config.constraints,
             rng=rng,
             features=features,
+            current_weights=drift_weights(prev, hist, prev_t),
         )
         weights = portfolio.construct(signal.generate(ctx), ctx)
         for rm in risk:
             weights = rm.adjust(weights, ctx)
+        weights = weights[weights.abs() > 1e-12].astype(float)
         check_constraints(weights, config.constraints, investable)
         targets[t] = weights
-        prev = weights
+        prev, prev_t = weights, t
     return targets
+
+
+def drift_weights(weights: pd.Series, hist: MarketData, since: pd.Timestamp | None) -> pd.Series:
+    """Weights set at ``since`` drifted with total returns (and cash) to ``hist.end``.
+
+    Approximation used for turnover control: ignores the one-session fill lag.
+    """
+    if since is None or weights.empty:
+        return pd.Series(dtype=float)
+    tri = hist.total_return_index
+    growth = (tri.iloc[-1] / tri.loc[since]).reindex(weights.index).fillna(1.0)
+    cash_idx = (1.0 + hist.cash()).cumprod()
+    cash_growth = float(cash_idx.iloc[-1] / cash_idx.loc[since])
+    risky: pd.Series = weights * growth
+    total = float(risky.sum()) + (1.0 - float(weights.sum())) * cash_growth
+    return risky / total
 
 
 def run_experiment(
@@ -218,7 +244,21 @@ def run_experiment(
         )
         benchmark = comps.backtester.run(bench_targets, view, comps.cost_model, bench_cfg, start)
 
+        base_targets = generate_targets(
+            view,
+            config,
+            signal=registry.build("signal", ComponentSpec(name="uniform")),
+            portfolio=registry.build("portfolio", config.baseline),
+            factors=[],
+            risk=[],
+            rng=rng,
+            start=start,
+        )
+        baseline = comps.backtester.run(base_targets, view, comps.cost_model, config, start)
+
         metrics = comps.evaluator.evaluate(strategy, benchmark)
+        base_metrics = comps.evaluator.evaluate(baseline, benchmark)
+        metrics |= {f"base_{k}": base_metrics[k] for k in BASELINE_KEYS}
         run.log_metrics(metrics)
         run.set_tag(
             "n_trials_to_date",
@@ -227,11 +267,20 @@ def run_experiment(
         run.log_frame("net_returns", strategy.net_returns)
         run.log_frame("weights", strategy.weights)
         run.log_frame("benchmark_net_returns", benchmark.net_returns)
+        run.log_frame("baseline_net_returns", baseline.net_returns)
         _log_summary(metrics)
 
-    return ExperimentResult(run.run_id, metrics, strategy, benchmark, issues)
+    return ExperimentResult(run.run_id, metrics, strategy, benchmark, baseline, issues)
 
 
 def _log_summary(metrics: dict[str, Any]) -> None:
-    keys = ("cagr", "vol", "sharpe", "max_drawdown", "turnover_annual", "bench_sharpe")
+    keys = (
+        "cagr",
+        "vol",
+        "sharpe",
+        "max_drawdown",
+        "turnover_annual",
+        "bench_sharpe",
+        "base_sharpe",
+    )
     log.info("metrics", extra={k: round(metrics[k], 4) for k in keys if k in metrics})

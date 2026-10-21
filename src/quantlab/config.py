@@ -43,6 +43,9 @@ class Asset(_Strict):
         "cash",
     ]
     region: str = "US"
+    tradable: bool = Field(
+        default=True, description="False = data only (e.g. a cash proxy), never held."
+    )
 
 
 class UniverseConfig(_Strict):
@@ -65,6 +68,10 @@ class UniverseConfig(_Strict):
     @property
     def tickers(self) -> tuple[str, ...]:
         return tuple(a.ticker for a in self.assets)
+
+    @property
+    def tradable_tickers(self) -> tuple[str, ...]:
+        return tuple(a.ticker for a in self.assets if a.tradable)
 
 
 class SplitConfig(_Strict):
@@ -200,6 +207,10 @@ class ExperimentConfig(_Strict):
     constraints: PortfolioConstraints = PortfolioConstraints()
     fund: FundConfig = FundConfig()
     benchmark: BenchmarkConfig
+    baseline: ComponentSpec = Field(
+        default=ComponentSpec(name="equal_weight"),
+        description="'Dumb' baseline portfolio computed in every run under the same mandate.",
+    )
     pipeline: PipelineConfig
     tracking: TrackingConfig = TrackingConfig()
 

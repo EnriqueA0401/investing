@@ -12,6 +12,7 @@ from quantlab.config import load_config
 from quantlab.data.quality import data_quality_report
 from quantlab.logging_setup import configure_logging
 from quantlab.pipeline import load_data, run_experiment
+from quantlab.study import load_study, run_study
 from quantlab.tracking import TrialLedger
 
 
@@ -60,6 +61,23 @@ def _cmd_run(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_study(args: argparse.Namespace) -> int:
+    study = load_study(args.study)
+    results = run_study(study, only=args.only or None)
+    cols = [
+        "sharpe",
+        "base_sharpe",
+        "bench_sharpe",
+        "cagr",
+        "vol",
+        "max_drawdown",
+        "turnover_annual",
+    ]
+    table = {k: {c: round(r.metrics[c], 3) for c in cols} for k, r in results.items()}
+    print(json.dumps(table, indent=1))
+    return 0
+
+
 def _cmd_trials(args: argparse.Namespace) -> int:
     ledger = TrialLedger(Path(args.ledger))
     print(
@@ -97,6 +115,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     r.add_argument("--stage", choices=["research", "final"], default="research")
     r.add_argument("--unlock-holdout", metavar="REASON", default=None)
     r.set_defaults(func=_cmd_run)
+
+    st = sub.add_parser("study", help="run the pre-registered experiment set (research stage)")
+    st.add_argument("study")
+    st.add_argument("--only", nargs="*", default=None)
+    st.set_defaults(func=_cmd_study)
 
     t = sub.add_parser("trials", help="multiple-testing trial counts from the ledger")
     t.add_argument("--ledger", default="research/trials.jsonl")

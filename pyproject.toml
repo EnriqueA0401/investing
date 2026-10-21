@@ -10,6 +10,7 @@ dependencies = [
     "pyarrow>=17",
     "pydantic>=2.9",
     "pyyaml>=6.0",
+    "scikit-learn>=1.5",
     "scipy>=1.14",
     "yfinance>=0.2.50",
 ]
@@ -46,6 +47,7 @@ select = ["E", "F", "W", "I", "B", "UP", "N", "SIM", "RUF", "PL", "NPY", "PD", "
 ignore = [
     "PLR0913",  # pipeline components legitimately take many explicit args
     "PLR2004",  # magic numbers are fine in tests / numerical code
+    "RUF001", "RUF002", "RUF003",  # Greek letters / math symbols in quant docstrings are intended
 ]
 
 [tool.ruff.lint.per-file-ignores]

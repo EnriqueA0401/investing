@@ -31,7 +31,7 @@ universe:
     - {ticker: GLD, asset_class: commodity, region: Global}
     - {ticker: DBC, asset_class: commodity, region: Global}
     # Cash proxy
-    - {ticker: BIL, asset_class: cash, region: US}
+    - {ticker: BIL, asset_class: cash, region: US, tradable: false}  # cash modelled via T-bill (STUDY_PLAN §2)
 
 split:
   data_start: 2002-07-01      # warm-up history for look-backs

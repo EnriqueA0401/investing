@@ -1,8 +1,8 @@
 # Data quality report
 
-- Snapshot: `32bc5db46626acc8`  
-- Sample: 2002-07-01 → 2026-09-30 (6102 sessions)  
-- Research window used for statistics: up to 2022-12-31  
+- Snapshot: `32bc5db46626acc8`
+- Sample: 2002-07-01 → 2026-09-30 (6102 sessions)
+- Research window used for statistics: up to 2022-12-31
 - Holdout (from 2023-01-01): **structural checks only**, no return statistics, to keep it sealed.
 
 Total-return index reconstructed from split-adjusted close + ex-date distributions; cross-checked against vendor Adj Close at fetch time (fetch fails above 0.5% daily divergence).
