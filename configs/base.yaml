@@ -1,0 +1,90 @@
+# Base research configuration. Experiments `extends: base.yaml` and override.
+# Universe, splits, costs and mandate were fixed in Phase 0 BEFORE looking at
+# any data. Changing them later counts as a new research decision and must be
+# justified in docs/research_log.md.
+name: base
+seed: 20260101
+data_snapshot: null           # pin a snapshot id for reproducible runs
+
+universe:
+  min_history_days: 252
+  assets:
+    # US / global equity
+    - {ticker: SPY, asset_class: equity, region: US}
+    - {ticker: IWM, asset_class: equity, region: US}
+    - {ticker: EFA, asset_class: equity, region: DevExUS}
+    - {ticker: EWJ, asset_class: equity, region: Japan}
+    - {ticker: VGK, asset_class: equity, region: Europe}
+    - {ticker: EEM, asset_class: equity, region: EM}
+    # Government bonds (duration ladder)
+    - {ticker: SHY, asset_class: government_bond, region: US}
+    - {ticker: IEF, asset_class: government_bond, region: US}
+    - {ticker: TLT, asset_class: government_bond, region: US}
+    - {ticker: AGG, asset_class: government_bond, region: US}  # aggregate; used by benchmark
+    - {ticker: TIP, asset_class: inflation_linked, region: US}
+    # Credit
+    - {ticker: LQD, asset_class: credit, region: US}
+    - {ticker: HYG, asset_class: credit, region: US}
+    - {ticker: EMB, asset_class: credit, region: EM}
+    # Real assets
+    - {ticker: VNQ, asset_class: real_estate, region: US}
+    - {ticker: GLD, asset_class: commodity, region: Global}
+    - {ticker: DBC, asset_class: commodity, region: Global}
+    # Cash proxy
+    - {ticker: BIL, asset_class: cash, region: US}
+
+split:
+  data_start: 2002-07-01      # warm-up history for look-backs
+  research_start: 2005-01-01  # first decision date eligible for evaluation
+  research_end: 2022-12-31
+  holdout_start: 2023-01-01   # SEALED until final evaluation
+  holdout_end: null
+  embargo_days: 21
+
+execution:
+  rebalance_frequency: ME
+  execution_lag_days: 1
+
+costs:
+  half_spread_bps:
+    default: 3.0
+    equity: 1.0
+    government_bond: 1.0
+    cash: 1.0
+    inflation_linked: 2.0
+    credit: 2.0
+    real_estate: 2.0
+    commodity: 3.0
+  commission_bps: 0.5
+  slippage_bps: 1.0
+  impact_coefficient: 0.1
+
+constraints:
+  long_only: true
+  max_gross_leverage: 1.0
+  max_weight: 0.20
+  min_weight: 0.0
+  max_turnover: null
+
+fund:
+  aum_usd: 1000000
+  target_volatility: 0.10
+
+benchmark:
+  weights: {SPY: 0.6, AGG: 0.4}
+  rebalance_frequency: ME
+
+pipeline:
+  data_source: {name: yfinance}        # implemented in Phase 2
+  validators:
+    - {name: basic_integrity}
+  signal: {name: uniform}
+  portfolio: {name: equal_weight}
+  cost_model: {name: spread_slippage_impact}
+  backtester: {name: daily_drift}
+  evaluator: {name: standard}
+
+tracking:
+  runs_dir: runs
+  ledger_path: research/trials.jsonl
+  snapshot_dir: data/snapshots

@@ -1,0 +1,21 @@
+"""Built-in component implementations. Importing this package registers them."""
+
+from quantlab.components import (
+    backtest,
+    costs,
+    data_sources,
+    evaluation,
+    portfolios,
+    signals,
+    validators,
+)
+
+__all__ = [
+    "backtest",
+    "costs",
+    "data_sources",
+    "evaluation",
+    "portfolios",
+    "signals",
+    "validators",
+]

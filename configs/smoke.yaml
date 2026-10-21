@@ -1,0 +1,17 @@
+# Offline end-to-end smoke test on synthetic data (no economic content).
+# Tracked in a scratch ledger so it never counts as a research trial.
+extends: base.yaml
+name: smoke-synthetic
+
+pipeline:
+  data_source:
+    name: synthetic
+    params:
+      seed: 11
+      end: 2025-12-31
+      inception: {HYG: 2007-04-11, EMB: 2007-12-19, DBC: 2006-02-03, BIL: 2007-05-30, VGK: 2005-03-10}
+
+tracking:
+  runs_dir: runs/smoke
+  ledger_path: runs/smoke/trials.jsonl
+  snapshot_dir: runs/smoke/snapshots

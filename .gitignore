@@ -1,0 +1,23 @@
+# Environment
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Tool caches
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Run outputs (artifacts are reproducible from config + snapshot + commit).
+# NOTE: research/trials.jsonl and data/snapshots/ ARE committed on purpose.
+runs/
+
+.DS_Store
+.idea/
+.vscode/
