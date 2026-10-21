@@ -17,7 +17,7 @@ from quantlab.data.market_data import MarketData
 
 def _md_table(df: pd.DataFrame) -> str:
     cols = [str(c) for c in df.columns]
-    lines = ["| " + " | ".join([df.index.name or "", *cols]) + " |"]
+    lines = ["| " + " | ".join([str(df.index.name or ""), *cols]) + " |"]
     lines.append("|" + "---|" * (len(cols) + 1))
     for idx, row in df.iterrows():
         cells = [f"{v:.4g}" if isinstance(v, float) else str(v) for v in row.tolist()]
@@ -32,13 +32,14 @@ def research_stats(data: MarketData, config: ExperimentConfig) -> pd.DataFrame:
     rows = {}
     for t in research.tickers:
         r = rets[t].dropna()
-        first = research.total_return_index[t].first_valid_index()
-        live = research.total_return_index[t].loc[first:]
-        hist = research.total_return_index[t].notna().cumsum()
-        investable_from = hist[hist >= config.universe.min_history_days].index
+        series = research.total_return_index[t]
+        first = series.first_valid_index()
+        live = series.loc[first:]
+        hist = series.notna().astype(int).cumsum()
+        investable_from = hist.index[(hist >= config.universe.min_history_days).to_numpy()]
         rows[t] = {
             "class": research.asset_class.get(t, "?"),
-            "first_obs": str(pd.Timestamp(first).date()) if first is not None else "-",
+            "first_obs": str(live.index[0].date()),
             "investable_from": str(investable_from[0].date()) if len(investable_from) else "-",
             "n_obs": int(live.notna().sum()),
             "internal_nans": int(live.isna().sum()),
