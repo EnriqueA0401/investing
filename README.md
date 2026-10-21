@@ -5,8 +5,13 @@ semanas–meses. Su objetivo es **no engañarse**: integridad temporal por
 construcción, holdout sellado, conteo de pruebas para corregir por multiple
 testing y costes siempre incluidos.
 
-> Estado: **Fase 1 — infraestructura** completa. Aún no hay datos reales ni
-> señales; el único experimento ejecutable es un smoke test sobre datos sintéticos.
+> Estado: **estudio completo** (fases 0–7). **Informe para el comité:
+> [`docs/report/REPORT.md`](docs/report/REPORT.md).**
+>
+> Conclusión: ninguna de las 15 reglas pre-registradas supera a equal-weight de forma
+> defendible (PBO 0.60, mejor p = 0.095). El candidato seleccionado rindió por debajo
+> de equal-weight y del 60/40 en el holdout. Recomendación: cartera de política
+> equal-weight.
 
 ## Mandato (fijado en Fase 0, antes de mirar datos)
 
@@ -24,8 +29,8 @@ testing y costes siempre incluidos.
 
 ```bash
 uv sync --frozen                         # entorno exacto desde uv.lock
-uv run quantlab run configs/smoke.yaml   # experimento end-to-end (sintético, offline)
-make check                               # lint + mypy strict + tests + smoke
+make reproduce                           # todo el estudio desde el snapshot commiteado
+make check                               # lint + mypy strict + tests + smoke (sintético, offline)
 ```
 
 Un resultado queda identificado por **(commit git, hash de config, id de snapshot de datos)**;
@@ -39,6 +44,12 @@ los tres se guardan en `runs/<run_id>/run.json` y en el ledger.
 | `quantlab snapshot CONFIG` | Descarga datos y los congela como snapshot direccionado por contenido |
 | `quantlab run CONFIG` | Corre un experimento en etapa *research* (nunca ve el holdout) |
 | `quantlab run CONFIG --stage final --unlock-holdout "motivo"` | Evaluación final; el desbloqueo queda registrado |
+| `quantlab data-report CONFIG` | Informe de calidad de datos (holdout: solo chequeos estructurales) |
+| `quantlab study configs/study.yaml` | Corre las 15 configuraciones pre-registradas (research) |
+| `quantlab validate-study` | Aplica los criterios pre-registrados: DSR, bootstrap vs EW, subperiodos, PBO |
+| `quantlab robustness configs/study.yaml` | Robustez post-selección, null aleatorio, diagnóstico CPCV del ML y riesgo |
+| `quantlab holdout configs/study.yaml --experiment ID --unlock-holdout "motivo"` | Evaluación única en el holdout (solo acepta el seleccionado por la regla) |
+| `quantlab finalize configs/study.yaml` | Pesos propuestos, stress hipotético y figuras del informe |
 | `quantlab trials [--hypothesis H]` | Nº de configuraciones probadas (input del Deflated Sharpe / PBO) |
 
 ## Arquitectura
@@ -56,7 +67,18 @@ PortfolioConstructor → RiskManager → Backtester(+CostModel) → Evaluator �
 - `src/quantlab/tracking.py` — tracking de corridas (`runs/`) + **ledger de pruebas append-only** (`research/trials.jsonl`).
 - `src/quantlab/data/store.py` — snapshots de datos inmutables con checksums SHA-256.
 - `src/quantlab/testing/leakage.py` — `assert_causal`: test adversarial de look-ahead obligatorio para cada factor.
-- `src/quantlab/components/` — implementaciones: fuente sintética, validador, equal-weight, pesos fijos, costes spread+slippage+impacto √, backtester diario, evaluador.
+- `src/quantlab/components/`: implementaciones intercambiables.
+  - Datos: yfinance + FRED y una fuente sintética.
+  - Validador de datos.
+  - Factores: momentum, TSMOM, vol realizada.
+  - Señales: top-N, combinación z-score, ridge walk-forward.
+  - Construcción: 1/N, inverse-vol, ERC, HRP, mínima varianza, media-varianza robusta.
+  - Overlays: filtro de tendencia, vol targeting, tope de turnover.
+  - Costes spread + slippage + impacto √, backtester diario y evaluador.
+- `src/quantlab/stats.py`: PSR, DSR, PBO (CSCV), bootstrap por bloques de Sharpe y selección walk-forward.
+- `src/quantlab/cv.py`: purged CV combinatorial (CPCV) con embargo.
+- `src/quantlab/risk.py`: VaR/CVaR, drawdowns, stress histórico e hipotético, exposiciones (Newey-West) y regímenes.
+- `src/quantlab/study.py`, `analysis.py`, `robustness.py`, `research_run.py`: orquestación del estudio y de la validación.
 
 Decisiones de diseño razonadas en [`docs/adr/`](docs/adr). Registro de hipótesis y
 veredictos en [`docs/research_log.md`](docs/research_log.md); plantilla de
@@ -79,10 +101,18 @@ pre-registro en [`docs/hypotheses/TEMPLATE.md`](docs/hypotheses/TEMPLATE.md).
 
 - **Survivorship en ETFs:** yfinance no incluye ETFs liquidados. Mitigación: universo fijado ex-ante y elegibilidad por fecha de inicio; residual documentado.
 - **Ajustes vendor:** el "adjusted close" está retro-ajustado; solo los ratios son point-in-time. Regla: los factores usan retornos/ratios, nunca niveles (lo detecta `assert_causal`).
-- **Cash al 0%** hasta conectar T-bills (FRED) en Fase 2: infla Sharpe absolutos; las comparaciones contra benchmark no se ven afectadas.
-- **Muestra corta:** ~18 años de research ≈ 216 rebalanceos mensuales → poca potencia estadística.
+- **Muestra corta:** unos 18 años de research (≈ 215 rebalanceos) y 44 meses de holdout, así que la potencia estadística es baja.
+- El resto de limitaciones está en `docs/report/REPORT.md` §10.
 
 ## Roadmap
 
-1. ✅ Infraestructura · 2. Datos reales (yfinance/FRED, validación, snapshot) · 3. Hipótesis pre-registradas + factores ·
-4. Construcción de cartera y riesgo · 5. Walk-forward/CPCV, DSR, PBO · 6. Robustez + evaluación única en holdout · 7. Informe al comité
+Fases completadas:
+1. Infraestructura.
+2. Datos reales.
+3. Pre-registro y factores.
+4. Cartera y riesgo.
+5. Validación estadística.
+6. Robustez y holdout.
+7. Informe.
+
+Ver `docs/research_log.md`.

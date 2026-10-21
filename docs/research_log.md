@@ -198,3 +198,35 @@ Trials en el ledger tras la robustez: 49 (15 de selección + 34 de robustez).
 
 **Siguiente paso:** abrir el holdout una única vez para H4-IV-TS12, con B-EW y el
 60/40 calculados en la misma corrida.
+
+## 2026-10-21 — Fase 6b: holdout (evaluado una vez)
+
+- Desbloqueo registrado en el ledger para H4-IV-TS12, con la etiqueta "no validado".
+  1 desbloqueo, 1 trial final.
+- Holdout 2023-02 → 2026-09 (44 meses):
+
+| Cartera | Sharpe | CAGR | Max DD |
+|---|---|---|---|
+| H4-IV-TS12 | 0.41 | 6.1% | −3.6% |
+| B-EW | 0.54 | 8.9% | −7.7% |
+| 60/40 | 0.83 | 12.6% | −11.2% |
+
+- H4 frente a EW: ΔSR −0.11, IC 95% [−0.54, +0.29]. Ninguna diferencia es significativa
+  con 44 meses, pero la dirección confirma la predicción del PBO: el ganador del
+  backtest no lo es fuera de muestra.
+- Pesos actuales de H4-IV-TS12: **80% cash**. El filtro apaga todos los bonos porque su
+  retorno de 12 meses está por debajo del T-bill. No es una asignación compatible con un
+  objetivo de vol del 10%.
+
+## 2026-10-21 — Fase 7: conclusión
+
+- **No hay edge validado.**
+- Recomendación según la regla pre-registrada: **cartera de política equal-weight** sobre
+  los 17 ETFs de riesgo (5.88% cada uno, rebalanceo mensual).
+- La elección frente al 60/40 es estratégica, no estadística (ver el informe, §9).
+- Informe: `docs/report/REPORT.md`.
+- Trials totales: 49 de research (15 de selección + 34 de robustez) y 1 final.
+- Hallazgos negativos que el comité debe conservar:
+  1. Las reglas ganadoras en research ganaban por reducir riesgo, no por alfa (t = 1.2).
+  2. El ML pareció funcionar en CPCV y no funciona en walk-forward estricto.
+  3. Elegir al ganador del backtest es peor que promediar todas las reglas.

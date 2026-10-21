@@ -13,7 +13,8 @@ from quantlab.config import load_config
 from quantlab.data.quality import data_quality_report
 from quantlab.logging_setup import configure_logging
 from quantlab.pipeline import load_data, run_experiment
-from quantlab.research_run import run_holdout, run_robustness
+from quantlab.report_figures import make_all
+from quantlab.research_run import proposed_portfolio, run_holdout, run_robustness
 from quantlab.study import load_study, run_study
 from quantlab.tracking import TrialLedger
 
@@ -82,7 +83,8 @@ def _cmd_study(args: argparse.Namespace) -> int:
 
 def _cmd_validate_study(args: argparse.Namespace) -> int:
     out = Path(args.results)
-    verdict = evaluate_study(out, TrialLedger(Path(args.ledger)), n_boot=args.n_boot)
+    hashes = {c.config_hash() for c in load_study(args.study).configs.values()}
+    verdict = evaluate_study(out, TrialLedger(Path(args.ledger)), hashes, n_boot=args.n_boot)
     (out / "validation.json").write_text(verdict.to_json())
     print(verdict.to_json())
     return 0
@@ -106,6 +108,18 @@ def _cmd_holdout(args: argparse.Namespace) -> int:
         raise SystemExit(f"pre-registered rule selected {selected}, not {args.experiment}")
     res = run_holdout(study, selected, args.unlock_holdout, study.output_dir)
     print(json.dumps(res.metrics, indent=2))
+    return 0
+
+
+def _cmd_finalize(args: argparse.Namespace) -> int:
+    study = load_study(args.study)
+    selected = _selected(study.output_dir)
+    weights = proposed_portfolio(study, ["B-EW", selected], study.output_dir)
+    figs = make_all(
+        study.output_dir, str(study.configs[selected].split.holdout_start), Path(args.figures)
+    )
+    print(weights.round(4).to_string())
+    print("\n".join(str(f) for f in figs))
     return 0
 
 
@@ -153,6 +167,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     st.set_defaults(func=_cmd_study)
 
     vs = sub.add_parser("validate-study", help="apply pre-registered acceptance criteria")
+    vs.add_argument("--study", default="configs/study.yaml")
     vs.add_argument("--results", default="research/results/study")
     vs.add_argument("--ledger", default="research/trials.jsonl")
     vs.add_argument("--n-boot", type=int, default=10_000)
@@ -167,6 +182,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     ho.add_argument("--experiment", required=True)
     ho.add_argument("--unlock-holdout", required=True, metavar="REASON")
     ho.set_defaults(func=_cmd_holdout)
+
+    fz = sub.add_parser("finalize", help="proposed portfolio weights, stress and report figures")
+    fz.add_argument("study")
+    fz.add_argument("--figures", default="docs/report/figures")
+    fz.set_defaults(func=_cmd_finalize)
 
     t = sub.add_parser("trials", help="multiple-testing trial counts from the ledger")
     t.add_argument("--ledger", default="research/trials.jsonl")

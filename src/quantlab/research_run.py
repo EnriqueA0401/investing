@@ -122,7 +122,42 @@ def run_holdout(study: Study, selected: str, reason: str, out_root: Path) -> Exp
         "60-40": res.benchmark.net_returns,
     }
     risk_pack(streams, data, out, "holdout_")
+    holdout_tests(out)
     return res
+
+
+def holdout_tests(out: Path) -> dict[str, Any]:
+    """Paired bootstrap Sharpe tests and PSR on the holdout (descriptive: 44 months)."""
+    r = pd.read_parquet(out / "returns_net.parquet")
+    names = [c for c in r.columns if c != "cash"]
+    ex = r[names].sub(r["cash"], axis=0)
+    monthly = cast(pd.DataFrame, stats.to_monthly(ex))
+    res: dict[str, Any] = {"n_months": len(monthly)}
+    for i, a in enumerate(names):
+        for b in names[i + 1 :]:
+            t = stats.sharpe_difference_test(monthly[a], monthly[b], n_boot=10_000, seed=0)
+            res[f"{a}_vs_{b}"] = {
+                "diff": t.diff_annual,
+                "p": t.p_value,
+                "ci": [t.ci_low, t.ci_high],
+            }
+    for c in names:
+        res[f"psr_{c}"] = stats.probabilistic_sharpe_ratio(ex[c])
+    (out / "holdout_tests.json").write_text(json.dumps(res, indent=2))
+    return res
+
+
+def proposed_portfolio(study: Study, ids: list[str], out_root: Path) -> pd.DataFrame:
+    """Weights decided at the last close for each config + hypothetical stress."""
+    data, _ = load_data(study.configs[ids[0]])
+    weights = {k: current_portfolio(study.configs[k], data) for k in ids}
+    table = pd.DataFrame(weights).fillna(0.0)
+    table.loc["CASH"] = 1 - table.sum()
+    table.to_csv(out_root / f"proposed_weights_{data.end.date()}.csv", float_format="%.4f")
+    bench = pd.Series(study.configs[ids[0]].benchmark.weights)
+    stress = risk.hypothetical_stress({**weights, "60-40": bench})
+    stress.to_csv(out_root / "hypothetical_stress_current.csv", float_format="%.4f")
+    return table
 
 
 def current_portfolio(config: ExperimentConfig, data: MarketData) -> pd.Series:

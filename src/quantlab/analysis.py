@@ -81,12 +81,18 @@ class StudyVerdict:
         return json.dumps(payload, indent=2, default=float)
 
 
-def evaluate_study(results_dir: Path, ledger: TrialLedger, n_boot: int = 10_000) -> StudyVerdict:
+def evaluate_study(
+    results_dir: Path, ledger: TrialLedger, selection_hashes: set[str], n_boot: int = 10_000
+) -> StudyVerdict:
+    """``selection_hashes``: config hashes of the pre-registered candidate set. N for the
+    DSR counts those found in the ledger, so later robustness runs do not change it."""
     excess = pd.read_parquet(results_dir / "returns_excess.parquet").dropna(how="all")
     excess = excess.dropna()  # common window for all candidates
-    n_trials = ledger.n_trials(stage="research")
-    if n_trials < excess.shape[1]:
-        raise RuntimeError("ledger has fewer trials than study columns: ledger out of sync")
+    n_trials = len(ledger.trial_hashes(stage="research") & selection_hashes)
+    if n_trials != excess.shape[1]:
+        raise RuntimeError(
+            f"{n_trials} selection trials in ledger vs {excess.shape[1]} study columns: out of sync"
+        )
     trial_srs = excess.apply(stats.per_period_sharpe).to_numpy()
     monthly = stats.to_monthly(excess)
     assert isinstance(monthly, pd.DataFrame)
