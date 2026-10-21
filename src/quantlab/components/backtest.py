@@ -27,7 +27,7 @@ class DailyDrift(Backtester):
     ``t + execution_lag_days``. On the fill day the portfolio earns the return
     of the *pre-trade* holdings, then trades; costs are charged on that day.
     Between fills, weights drift with prices. Un-invested weight is cash
-    (0% return until a cash-rate series is wired in Phase 2).
+    earning ``data.cash_return`` (0% if no cash series is loaded).
     """
 
     class Params(ComponentParams):
@@ -35,6 +35,27 @@ class DailyDrift(Backtester):
         vol_window: int = Field(default=60, ge=2)
 
     params: Params
+
+    def market_state(self, data: MarketData) -> tuple[pd.DataFrame, pd.DataFrame]:
+        """ADV (USD) and daily vol usable on day d: measured through d-1 (shift(1))."""
+        p = self.params
+        adv = (data.close * data.volume).rolling(p.adv_window, min_periods=p.adv_window).mean()
+        sig = data.returns().rolling(p.vol_window, min_periods=p.vol_window).std()
+        return adv.shift(1), sig.shift(1)
+
+    @staticmethod
+    def fill_schedule(
+        targets: Mapping[pd.Timestamp, pd.Series], data: MarketData, lag: int
+    ) -> dict[pd.Timestamp, pd.Series]:
+        """Map each decision to its fill date; decisions filling beyond the data are dropped."""
+        fills: dict[pd.Timestamp, pd.Series] = {}
+        for t, target in sorted(targets.items()):
+            fill = shift_trading_days(data.dates, pd.Timestamp(t), lag)
+            if fill is None:
+                log.info("target dropped: fill date beyond data", extra={"decision": str(t)})
+                continue
+            fills[fill] = target.reindex(data.tickers).fillna(0.0)
+        return fills
 
     def run(
         self,
@@ -45,14 +66,7 @@ class DailyDrift(Backtester):
         start: pd.Timestamp | None = None,
     ) -> BacktestResult:
         dates, tickers = data.dates, data.tickers
-        lag = config.execution.execution_lag_days
-        fills: dict[pd.Timestamp, pd.Series] = {}
-        for t, target in sorted(targets.items()):
-            fill = shift_trading_days(dates, pd.Timestamp(t), lag)
-            if fill is None:
-                log.info("target dropped: fill date beyond data", extra={"decision": str(t)})
-                continue
-            fills[fill] = target.reindex(tickers).fillna(0.0)
+        fills = self.fill_schedule(targets, data, config.execution.execution_lag_days)
         if not fills:
             raise ValueError("no executable targets")
 
@@ -61,19 +75,14 @@ class DailyDrift(Backtester):
             raise ValueError("a target fills before the evaluation start")
 
         rets = data.returns()
-        # Market state for costs on day d is measured through d-1 (shift(1)).
-        dollar_vol = data.close * data.volume
-        adv = (
-            dollar_vol.rolling(self.params.adv_window, min_periods=self.params.adv_window)
-            .mean()
-            .shift(1)
-        )
-        sig = (
-            rets.rolling(self.params.vol_window, min_periods=self.params.vol_window).std().shift(1)
-        )
+        adv, sig = self.market_state(data)
 
         sim = dates[dates >= first]
         r_mat = rets.loc[sim].to_numpy(dtype=float)
+        cash = data.cash().loc[sim]
+        if cash.isna().any():
+            raise ValueError("cash return series has gaps inside the simulation window")
+        rc = cash.to_numpy(dtype=float)
         w = np.zeros(len(tickers))
         nav = 1.0
         gross_out = np.empty(len(sim))
@@ -90,7 +99,7 @@ class DailyDrift(Backtester):
                 bad = [tickers[j] for j in np.flatnonzero(held & np.isnan(r))]
                 raise ValueError(f"{d.date()}: holding assets without a return: {bad}")
             r = np.nan_to_num(r, nan=0.0)
-            gross = float(w @ r)
+            gross = float(w @ r) + (1.0 - float(w.sum())) * rc[i]
             w = w * (1 + r) / (1 + gross)
             cost = 0.0
             if d in fills:
@@ -121,4 +130,5 @@ class DailyDrift(Backtester):
             weights=pd.DataFrame(w_out, index=sim, columns=tickers),
             targets=target_frame,
             turnover=pd.Series(turnover, name="turnover", dtype=float),
+            cash_returns=cash.rename("cash"),
         )

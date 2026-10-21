@@ -1,0 +1,58 @@
+{
+  "snapshot_id": "32bc5db46626acc8",
+  "created_at": "2026-10-21T02:36:15.548656+00:00",
+  "panels": {
+    "close": "79d82e26d383be336f501e4c60b72838b9e038c19b8ffffb63ac29a8b6f2015d",
+    "total_return_index": "b2497255349491bab75e57b3ed3609372aa8a8cd2bc3490fe2013ec7d9011637",
+    "volume": "9a3c7686817d50d227b8a096470fb1583f7243f0e8390fabd7985913d3d57b23",
+    "cash_return": "ad0318e86e4a659791ac02155b5c8789607f909dacd217367bb542c9e0865dc1"
+  },
+  "asset_class": {
+    "AGG": "government_bond",
+    "BIL": "cash",
+    "DBC": "commodity",
+    "EEM": "equity",
+    "EFA": "equity",
+    "EMB": "credit",
+    "EWJ": "equity",
+    "GLD": "commodity",
+    "HYG": "credit",
+    "IEF": "government_bond",
+    "IWM": "equity",
+    "LQD": "credit",
+    "SHY": "government_bond",
+    "SPY": "equity",
+    "TIP": "inflation_linked",
+    "TLT": "government_bond",
+    "VGK": "equity",
+    "VNQ": "real_estate"
+  },
+  "start": "2002-07-01",
+  "end": "2026-09-30",
+  "tickers": [
+    "SPY",
+    "IWM",
+    "EFA",
+    "EWJ",
+    "VGK",
+    "EEM",
+    "SHY",
+    "IEF",
+    "TLT",
+    "AGG",
+    "TIP",
+    "LQD",
+    "HYG",
+    "EMB",
+    "VNQ",
+    "GLD",
+    "DBC",
+    "BIL"
+  ],
+  "provenance": {
+    "source": {
+      "name": "yfinance",
+      "params": {}
+    }
+  }
+}

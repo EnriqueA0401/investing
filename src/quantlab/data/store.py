@@ -45,6 +45,8 @@ class SnapshotStore:
 
     def save(self, data: MarketData, provenance: Mapping[str, Any]) -> str:
         panels = {name: getattr(data, name) for name in PANEL_FIELDS}
+        if data.cash_return is not None:
+            panels["cash_return"] = data.cash_return.rename("cash").to_frame()
         digests = {name: _frame_digest(df) for name, df in panels.items()}
         asset_class = dict(sorted(data.asset_class.items()))
         snap_id = hashlib.sha256(
@@ -87,4 +89,10 @@ class SnapshotStore:
                     f"snapshot {snap_id}: panel '{name}' checksum mismatch"
                 )
             panels[name] = df
-        return MarketData(**panels, asset_class=manifest["asset_class"])
+        cash: pd.Series | None = None
+        if "cash_return" in manifest["panels"]:
+            cash_df = pd.read_parquet(self.root / snap_id / "cash_return.parquet")
+            if _frame_digest(cash_df) != manifest["panels"]["cash_return"]:
+                raise SnapshotIntegrityError(f"snapshot {snap_id}: cash_return checksum mismatch")
+            cash = cash_df["cash"]
+        return MarketData(**panels, asset_class=manifest["asset_class"], cash_return=cash)

@@ -40,6 +40,9 @@ def _scramble_after(data: MarketData, t: pd.Timestamp, rng: np.random.Generator)
         total_return_index=noisy(data.total_return_index, 50.0),
         volume=noisy(data.volume, 1e6),
         asset_class=data.asset_class,
+        cash_return=None
+        if data.cash_return is None
+        else data.cash_return.where(~future, rng.normal(0.0, 1e-3, size=len(future))),
     )
 
 

@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-from pydantic import Field
-
 from quantlab import metrics as m
-from quantlab.contracts import BacktestResult, ComponentParams, Evaluator
+from quantlab.contracts import BacktestResult, Evaluator
 from quantlab.registry import register
 
 
@@ -13,22 +11,16 @@ from quantlab.registry import register
 class StandardEvaluator(Evaluator):
     """Net-of-cost performance, cost drag, turnover and benchmark-relative stats."""
 
-    class Params(ComponentParams):
-        risk_free_annual: float = Field(
-            default=0.0, description="Placeholder until a T-bill series is wired in (Phase 2)."
-        )
-
-    params: Params
-
     def evaluate(
         self, result: BacktestResult, benchmark: BacktestResult | None = None
     ) -> dict[str, float]:
         net, gross = result.net_returns, result.gross_returns
-        rf_d = (1 + self.params.risk_free_annual) ** (1 / m.PERIODS_PER_YEAR) - 1
+        rf_d = result.cash_returns
         years = len(net) / m.PERIODS_PER_YEAR
         out = {
             "n_days": float(len(net)),
             "cagr": m.annualized_return(net),
+            "cash_cagr": m.annualized_return(rf_d),
             "vol": m.annualized_vol(net),
             "sharpe": m.sharpe_ratio(net, rf_d),
             "sortino": m.sortino_ratio(net, rf_d),
@@ -46,7 +38,7 @@ class StandardEvaluator(Evaluator):
             s, b = net.loc[common], benchmark.net_returns.loc[common]
             out |= {
                 "bench_cagr": m.annualized_return(b),
-                "bench_sharpe": m.sharpe_ratio(b, rf_d),
+                "bench_sharpe": m.sharpe_ratio(b, rf_d.loc[common]),
                 "bench_max_drawdown": m.max_drawdown(b),
                 "excess_cagr": m.annualized_return(s) - m.annualized_return(b),
                 "tracking_error": m.tracking_error(s, b),

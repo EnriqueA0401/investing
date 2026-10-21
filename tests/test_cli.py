@@ -32,9 +32,20 @@ def cfg_path(tmp_path: Path) -> Path:
     return p
 
 
-def test_validate_reports_unresolved_components(capsys: pytest.CaptureFixture[str]) -> None:
-    assert main(["validate", str(ROOT / "configs" / "base.yaml")]) == 1
-    assert "data_source:yfinance" in capsys.readouterr().out
+def test_validate_reports_unresolved_components(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    p = tmp_path / "bad.yaml"
+    p.write_text(
+        yaml.safe_dump(
+            {
+                "extends": str(ROOT / "configs" / "base.yaml"),
+                "pipeline": {"signal": {"name": "nope"}},
+            }
+        )
+    )
+    assert main(["validate", str(p)]) == 1
+    assert "signal:nope" in capsys.readouterr().out
 
 
 def test_run_then_trials(

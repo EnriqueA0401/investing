@@ -9,6 +9,7 @@ from pathlib import Path
 
 from quantlab import registry
 from quantlab.config import load_config
+from quantlab.data.quality import data_quality_report
 from quantlab.logging_setup import configure_logging
 from quantlab.pipeline import load_data, run_experiment
 from quantlab.tracking import TrialLedger
@@ -36,6 +37,17 @@ def _cmd_validate(args: argparse.Namespace) -> int:
 def _cmd_snapshot(args: argparse.Namespace) -> int:
     _, snap_id = load_data(load_config(args.config))
     print(snap_id)
+    return 0
+
+
+def _cmd_data_report(args: argparse.Namespace) -> int:
+    cfg = load_config(args.config)
+    data, snap_id = load_data(cfg)
+    validators = [registry.build("validator", s) for s in cfg.pipeline.validators]
+    report = data_quality_report(data, cfg, snap_id, validators)
+    Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+    Path(args.out).write_text(report)
+    print(args.out)
     return 0
 
 
@@ -74,6 +86,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     s = sub.add_parser("snapshot", help="fetch data and freeze it as a content-addressed snapshot")
     s.add_argument("config")
     s.set_defaults(func=_cmd_snapshot)
+
+    q = sub.add_parser("data-report", help="data-quality report (holdout: structural only)")
+    q.add_argument("config")
+    q.add_argument("--out", default="docs/data_quality.md")
+    q.set_defaults(func=_cmd_data_report)
 
     r = sub.add_parser("run", help="run an experiment")
     r.add_argument("config")

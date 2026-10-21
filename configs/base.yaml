@@ -4,7 +4,7 @@
 # justified in docs/research_log.md.
 name: base
 seed: 20260101
-data_snapshot: null           # pin a snapshot id for reproducible runs
+data_snapshot: 32bc5db46626acc8   # frozen 2026-10-21 (yfinance + FRED DTB3)
 
 universe:
   min_history_days: 252
@@ -38,7 +38,7 @@ split:
   research_start: 2005-01-01  # first decision date eligible for evaluation
   research_end: 2022-12-31
   holdout_start: 2023-01-01   # SEALED until final evaluation
-  holdout_end: null
+  holdout_end: 2026-09-30     # last complete month at data freeze (2026-10-21)
   embargo_days: 21
 
 execution:

@@ -171,10 +171,16 @@ class BacktestResult:
     weights: pd.DataFrame
     targets: pd.DataFrame
     turnover: pd.Series
+    cash_returns: pd.Series
 
     def __post_init__(self) -> None:
         if not self.net_returns.index.equals(self.gross_returns.index):
             raise ValueError("gross/net return indices differ")
+        if not self.cash_returns.index.equals(self.net_returns.index):
+            raise ValueError("cash/net return indices differ")
+
+    def excess_returns(self) -> pd.Series:
+        return self.net_returns - self.cash_returns
 
 
 class Backtester(Component, ABC):

@@ -9,6 +9,10 @@ information that was observable at the close of ``d``.
 when later dividends/splits occur, so only *ratios* within the series are
 point-in-time safe. Features must therefore be built from returns or ratios,
 never from price levels of an adjusted series.
+
+``cash_return`` (optional) is the simple return earned by uninvested cash from
+the previous trading date to ``d``; it is the risk-free rate for excess-return
+statistics.
 """
 
 from __future__ import annotations
@@ -28,6 +32,7 @@ class MarketData:
     total_return_index: pd.DataFrame
     volume: pd.DataFrame
     asset_class: Mapping[str, str] = field(default_factory=dict)
+    cash_return: pd.Series | None = None
 
     def __post_init__(self) -> None:
         ref = self.total_return_index
@@ -41,6 +46,8 @@ class MarketData:
             panel = getattr(self, name)
             if not panel.index.equals(ref.index) or list(panel.columns) != list(ref.columns):
                 raise ValueError(f"panel '{name}' is not aligned with total_return_index")
+        if self.cash_return is not None and not self.cash_return.index.equals(ref.index):
+            raise ValueError("cash_return is not aligned with total_return_index")
 
     @property
     def dates(self) -> pd.DatetimeIndex:
@@ -68,6 +75,7 @@ class MarketData:
             asset_class=dict(self.asset_class)
             if cols is None
             else {t: self.asset_class[t] for t in cols if t in self.asset_class},
+            cash_return=None if self.cash_return is None else self.cash_return.loc[rows],
         )
 
     def asof(self, t: pd.Timestamp | str) -> MarketData:
@@ -93,6 +101,12 @@ class MarketData:
     def returns(self) -> pd.DataFrame:
         """Simple daily total returns; NaN before an asset's first observation."""
         return self.total_return_index.pct_change(fill_method=None)
+
+    def cash(self) -> pd.Series:
+        """Daily cash return; zero if no cash series was loaded."""
+        if self.cash_return is None:
+            return pd.Series(0.0, index=self.dates, name="cash")
+        return self.cash_return
 
     def history_length(self) -> pd.Series:
         """Number of valid observations per ticker up to the last row."""

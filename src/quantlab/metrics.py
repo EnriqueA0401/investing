@@ -32,14 +32,14 @@ def annualized_vol(r: pd.Series) -> float:
     return float(_clean(r).std(ddof=1) * np.sqrt(PERIODS_PER_YEAR))
 
 
-def sharpe_ratio(r: pd.Series, rf_daily: float = 0.0) -> float:
-    ex = _clean(r) - rf_daily
+def sharpe_ratio(r: pd.Series, rf_daily: float | pd.Series = 0.0) -> float:
+    ex = (_clean(r) - rf_daily).dropna()
     sd = ex.std(ddof=1)
     return float(ex.mean() / sd * np.sqrt(PERIODS_PER_YEAR)) if sd > 0 else float("nan")
 
 
-def sortino_ratio(r: pd.Series, rf_daily: float = 0.0) -> float:
-    ex = _clean(r) - rf_daily
+def sortino_ratio(r: pd.Series, rf_daily: float | pd.Series = 0.0) -> float:
+    ex = (_clean(r) - rf_daily).dropna()
     downside = np.sqrt((np.minimum(ex, 0.0) ** 2).mean())
     return float(ex.mean() / downside * np.sqrt(PERIODS_PER_YEAR)) if downside > 0 else float("nan")
 

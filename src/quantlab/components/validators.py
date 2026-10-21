@@ -23,6 +23,7 @@ class BasicIntegrity(DataValidator):
         max_abs_daily_return: float = 0.25
         max_internal_gap_days: int = 3
         max_stale_days: int = 5
+        max_abs_daily_cash_return: float = 0.001
 
     params: Params
 
@@ -71,7 +72,33 @@ class BasicIntegrity(DataValidator):
                 issues.append(
                     ValidationIssue("stale", Severity.WARNING, f"{stale_run} unchanged days", t)
                 )
+            zero_vol = data.volume[t].loc[live.index].eq(0)
+            if zero_vol.any():
+                issues.append(
+                    ValidationIssue(
+                        "zero_volume",
+                        Severity.WARNING,
+                        f"{int(zero_vol.sum())} sessions with zero volume",
+                        t,
+                        _fmt(zero_vol[zero_vol].index),
+                    )
+                )
             vol = data.volume[t].to_numpy(dtype=float)
             if np.nanmin(vol, initial=0.0) < 0:
                 issues.append(ValidationIssue("negative_volume", Severity.ERROR, "volume < 0", t))
+        if data.cash_return is not None:
+            cash = data.cash_return
+            if cash.isna().any():
+                issues.append(ValidationIssue("cash_gap", Severity.ERROR, "NaN cash returns"))
+            extreme = cash[cash.abs() > p.max_abs_daily_cash_return].index
+            if len(extreme):
+                issues.append(
+                    ValidationIssue(
+                        "cash_extreme",
+                        Severity.ERROR,
+                        "implausible daily cash return",
+                        None,
+                        _fmt(extreme),
+                    )
+                )
         return issues

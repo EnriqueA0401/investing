@@ -15,3 +15,4 @@ tracking:
   runs_dir: runs/smoke
   ledger_path: runs/smoke/trials.jsonl
   snapshot_dir: runs/smoke/snapshots
+data_snapshot: null

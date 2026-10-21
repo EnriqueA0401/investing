@@ -8,6 +8,7 @@ from quantlab.components import (
     portfolios,
     signals,
     validators,
+    vendors,
 )
 
 __all__ = [
@@ -18,4 +19,5 @@ __all__ = [
     "portfolios",
     "signals",
     "validators",
+    "vendors",
 ]
