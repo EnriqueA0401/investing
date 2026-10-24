@@ -133,6 +133,12 @@ def asof_panel(
     if records.empty:
         return pd.DataFrame(index=dates, dtype=float)
     rec = records.dropna(subset=["val"]).copy()
+    # Normalise to datetime64[ns]: object-dtype columns (from empty groups) would make
+    # numpy compare Timestamps with nanosecond integers.
+    rec["end"] = pd.to_datetime(rec["end"]).astype("datetime64[ns]")
+    rec["avail"] = pd.to_datetime(rec["avail"]).astype("datetime64[ns]")
+    rec["val"] = rec["val"].astype(float)
+    dates = pd.DatetimeIndex(pd.DatetimeIndex(dates).astype("datetime64[ns]"))
     rec["usable"] = rec["avail"] + pd.Timedelta(days=lag_days)
     cols: dict[int, np.ndarray] = {}
     for cik, grp in rec.groupby("cik", sort=False):

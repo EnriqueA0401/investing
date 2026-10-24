@@ -88,3 +88,17 @@ def test_stale_data_is_dropped_and_lookback() -> None:
     assert now.iloc[0] == 12.0
     assert ago.iloc[0] == 10.0
     assert np.isnan(now.iloc[1])  # older than max_age_days
+
+
+def test_asof_handles_object_dtype_records() -> None:
+    rec = pd.DataFrame(
+        {
+            "cik": [1, 1],
+            "end": [T("2019-12-31"), T("2020-12-31")],
+            "val": [1.0, 2.0],
+            "avail": [T("2020-02-01"), T("2021-02-01")],
+        },
+        dtype=object,
+    )
+    p = asof_panel(rec, pd.DatetimeIndex(["2020-06-30", "2021-06-30"]))[1]
+    assert p.tolist() == [1.0, 2.0]
