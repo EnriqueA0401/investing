@@ -4,7 +4,10 @@ Reorganizations (new holding company, redomicile) give a listed company a new
 CIK whose EDGAR history starts at the reorganization (e.g. Medtronic, Disney,
 Exxon). Without linking, the company drops out of the historical universe and
 the survivorship coverage measure counts it as 'dead'. A predecessor is linked
-when it stopped filing close to when the successor started and the names match.
+when it stopped filing close to when the successor started and the names are
+identical after removing legal suffixes. Fuzzy thresholds (0.85-0.95) were tried
+and rejected: generic words ('Pharmaceuticals', 'Acquisition Corp II/III') produced
+false links such as Atheros -> Charter Communications.
 Name-changing reorganizations (Google -> Alphabet) are not caught; this is a
 documented limitation, not silently patched.
 """
@@ -39,7 +42,7 @@ def link_predecessors(
     names: pd.Series,
     current_ciks: set[int],
     *,
-    min_similarity: float = 0.85,
+    min_similarity: float = 0.999,
     gap_days: tuple[int, int] = (-200, 450),
     since: str = "2009-06-01",
 ) -> dict[int, int]:

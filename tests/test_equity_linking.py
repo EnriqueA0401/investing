@@ -33,8 +33,16 @@ def test_links_reorganized_company_and_relabels_history() -> None:
         + _facts(3, "2010-03-31", "2015-12-31")
     )
     names = pd.Series({1: "WALT DISNEY CO/", 2: "Walt Disney Co", 3: "Unrelated Corp"})
-    links = link_predecessors(facts, names, current_ciks={2})
+    links = link_predecessors(facts, names, current_ciks={2})  # exact normalized names
     assert links == {1: 2}
     out = relabel(facts, links)
     assert out.loc[out["cik"] == 2, "end"].min() == T("2010-03-31")
     assert (out["cik"] == 1).sum() == 1  # only the overlapping period stays with the predecessor
+
+
+def test_generic_industry_words_do_not_link() -> None:
+    facts = pd.DataFrame(
+        _facts(1, "2010-03-31", "2011-03-31") + _facts(2, "2011-06-30", "2020-12-31")
+    )
+    names = pd.Series({1: "ATHEROS COMMUNICATIONS INC", 2: "Charter Communications, Inc."})
+    assert link_predecessors(facts, names, current_ciks={2}) == {}
