@@ -29,29 +29,32 @@ def download_prices(
 
     raw_dir.mkdir(parents=True, exist_ok=True)
     parts: dict[str, list[pd.DataFrame]] = {f: [] for f in FIELDS}
-    for i in range(0, len(tickers), chunk):
-        batch = tickers[i : i + chunk]
-        cache = raw_dir / f"chunk_{i // chunk:04d}.parquet"
-        if cache.exists():
-            df = pd.read_parquet(cache)
-        else:
-            kwargs: dict[str, Any] = {
-                "start": start,
-                "end": end,
-                "auto_adjust": False,
-                "actions": True,
-                "progress": False,
-                "group_by": "column",
-                "threads": True,
-            }
-            df = yf.download(batch, **kwargs)
-            if df is None or df.empty:
-                continue
-            df.to_parquet(cache)
-            log.info("price chunk", extra={"chunk": i // chunk, "tickers": len(batch)})
-        for f in FIELDS:
-            if f in df.columns.get_level_values(0):
-                parts[f].append(pd.DataFrame(df[f]))
+    have: set[str] = set()
+    cached = sorted(raw_dir.glob("chunk_*.parquet"))
+    for path in cached:  # cache is keyed by content, not by position in the ticker list
+        df = pd.read_parquet(path)
+        _collect(df, parts, tickers)
+        have |= set(df["Close"].columns) if "Close" in df.columns.get_level_values(0) else set()
+    todo = [t for t in tickers if t not in have]
+    for i in range(0, len(todo), chunk):
+        batch = todo[i : i + chunk]
+        kwargs: dict[str, Any] = {
+            "start": start,
+            "end": end,
+            "auto_adjust": False,
+            "actions": True,
+            "progress": False,
+            "group_by": "column",
+            "threads": True,
+        }
+        df = yf.download(batch, **kwargs)
+        if df is None or df.empty:
+            continue
+        df.to_parquet(raw_dir / f"chunk_{len(cached) + i // chunk:04d}.parquet")
+        _collect(df, parts, tickers)
+        log.info(
+            "price chunk", extra={"downloaded": len(batch), "remaining": len(todo) - i - len(batch)}
+        )
     out = {}
     for f, frames in parts.items():
         if frames:
@@ -61,6 +64,14 @@ def download_prices(
             ).as_unit("ns")
             out[f] = panel.loc[:, ~panel.columns.duplicated()].astype("float64")
     return out
+
+
+def _collect(df: pd.DataFrame, parts: dict[str, list[pd.DataFrame]], wanted: list[str]) -> None:
+    keep = set(wanted)
+    for f in FIELDS:
+        if f in df.columns.get_level_values(0):
+            panel = pd.DataFrame(df[f])
+            parts[f].append(panel.loc[:, [c for c in panel.columns if c in keep]])
 
 
 def build_price_panels(raw: dict[str, pd.DataFrame], min_obs: int = 252) -> dict[str, pd.DataFrame]:

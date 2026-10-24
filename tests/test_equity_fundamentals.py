@@ -6,7 +6,13 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from quantlab.equities.fundamentals import asof_panel, instant_records, merge_tags, ttm_records
+from quantlab.equities.fundamentals import (
+    asof_panel,
+    instant_records,
+    merge_tags,
+    shares_records,
+    ttm_records,
+)
 
 T = pd.Timestamp
 
@@ -102,3 +108,22 @@ def test_asof_handles_object_dtype_records() -> None:
     )
     p = asof_panel(rec, pd.DatetimeIndex(["2020-06-30", "2021-06-30"]))[1]
     assert p.tolist() == [1.0, 2.0]
+
+
+def test_shares_fall_back_for_multiclass_issuers() -> None:
+    rows = [
+        {
+            "cik": 7,
+            "tag": "WeightedAverageNumberOfSharesOutstandingBasic",
+            "unit": "shares",
+            "start": T(f"20{y}-01-01"),
+            "end": T(f"20{y}-12-31"),
+            "val": 100.0 + y,
+            "filed": T(f"20{y + 1}-02-01"),
+            "form": "10-K",
+            "accn": f"w{y}",
+        }
+        for y in range(15, 20)
+    ]
+    out = shares_records(pd.DataFrame(rows))
+    assert sorted(out["val"]) == [115.0, 116.0, 117.0, 118.0, 119.0]

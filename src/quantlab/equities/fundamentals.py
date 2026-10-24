@@ -99,15 +99,37 @@ def instant_records(facts: pd.DataFrame, tags: Iterable[str]) -> pd.DataFrame:
     return sub[["cik", "end", "val", "filed"]].rename(columns={"filed": "avail"})
 
 
-def shares_records(facts: pd.DataFrame) -> pd.DataFrame:
-    """Cover-page shares outstanding, summed across share classes of the same filing."""
-    sub = facts[
-        (facts["tag"] == "EntityCommonStockSharesOutstanding") & (facts["unit"] == "shares")
+def shares_records(facts: pd.DataFrame, min_obs: int = 4) -> pd.DataFrame:
+    """Shares outstanding per filing, from the best source available for each company.
+
+    Priority: cover-page dei shares (summed across classes of one filing) ->
+    balance-sheet CommonStockSharesOutstanding -> period weighted-average basic
+    shares. Multi-class issuers report cover-page shares per class, and such
+    dimensional facts are absent from companyfacts, hence the fallbacks.
+    """
+
+    def per_filing(tag: str) -> pd.DataFrame:
+        sub = facts[(facts["tag"] == tag) & (facts["unit"] == "shares")]
+        if tag != "EntityCommonStockSharesOutstanding":
+            sub = first_filed(sub, ["cik", "end"])
+        agg = sub.groupby(["cik", "accn"], as_index=False).agg(
+            val=("val", "sum"), end=("end", "max"), avail=("filed", "min")
+        )
+        return agg[["cik", "end", "val", "avail"]]
+
+    sources = [
+        per_filing("EntityCommonStockSharesOutstanding"),
+        per_filing("CommonStockSharesOutstanding"),
+        per_filing("WeightedAverageNumberOfSharesOutstandingBasic"),
     ]
-    per_filing = sub.groupby(["cik", "accn"], as_index=False).agg(
-        val=("val", "sum"), end=("end", "max"), avail=("filed", "min")
-    )
-    return per_filing[["cik", "end", "val", "avail"]]
+    chosen: dict[int, pd.DataFrame] = {}
+    for src in sources:
+        counts = src.groupby("cik").size()
+        for cik in counts[counts >= min_obs].index:
+            chosen.setdefault(int(cik), src[src["cik"] == cik])
+    if not chosen:
+        return pd.DataFrame(columns=["cik", "end", "val", "avail"])
+    return pd.concat(chosen.values(), ignore_index=True)
 
 
 def float_records(facts: pd.DataFrame) -> pd.DataFrame:

@@ -20,7 +20,7 @@ import pandas as pd
 from quantlab.components.vendors import cash_return_from_rate, fetch_fred_series
 from quantlab.data.market_data import MarketData
 from quantlab.data.store import SnapshotStore
-from quantlab.equities import edgar, fundamentals, prices, sources, universe
+from quantlab.equities import edgar, fundamentals, linking, prices, sources, universe
 from quantlab.logging_setup import configure_logging, get_logger
 
 log = get_logger(__name__)
@@ -39,9 +39,12 @@ class BuildConfig:
     exchanges: tuple[str, ...] = ("NYSE", "Nasdaq", "CBOE")
 
 
-def candidate_tickers(facts: pd.DataFrame, cfg: BuildConfig) -> pd.DataFrame:
+def listed_today(cfg: BuildConfig) -> pd.DataFrame:
     tmap = sources.ticker_map()
-    tmap = tmap[tmap["exchange"].isin(cfg.exchanges)].drop_duplicates("cik", keep="first")
+    return tmap[tmap["exchange"].isin(cfg.exchanges)].drop_duplicates("cik", keep="first")
+
+
+def candidate_tickers(facts: pd.DataFrame, tmap: pd.DataFrame, cfg: BuildConfig) -> pd.DataFrame:
     floats = fundamentals.float_records(facts)
     floats = floats[floats["end"] >= pd.Timestamp("2008-06-30")]
     max_float = floats.groupby("cik")["val"].max()
@@ -51,14 +54,31 @@ def candidate_tickers(facts: pd.DataFrame, cfg: BuildConfig) -> pd.DataFrame:
     return cand[["cik", "ticker", "name", "exchange"]].reset_index(drop=True)
 
 
-def build(cfg: BuildConfig) -> str:
+def build(cfg: BuildConfig) -> str:  # noqa: PLR0915 - linear, documented build recipe
     edgar_dir = cfg.raw_dir / "edgar"
     edgar.build_facts_table(edgar_dir)
     facts = edgar.load_facts(edgar_dir)
     names = pd.read_parquet(edgar_dir / "entity_names.parquet")["name"]
     log.info("facts loaded", extra={"rows": len(facts)})
 
-    cand = candidate_tickers(facts, cfg)
+    tmap = listed_today(cfg)
+    links = linking.link_predecessors(facts, names, set(tmap["cik"].astype(int)))
+    facts = linking.relabel(facts, links)
+    log.info("predecessor CIKs linked", extra={"n": len(links)})
+    cfg.report_dir.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        [
+            {
+                "predecessor_cik": p,
+                "predecessor": names.get(p, ""),
+                "successor_cik": s,
+                "successor": names.get(s, ""),
+            }
+            for p, s in links.items()
+        ]
+    ).to_csv(cfg.report_dir / "cik_links.csv", index=False)
+
+    cand = candidate_tickers(facts, tmap, cfg)
     log.info("candidates", extra={"n": len(cand)})
     tickers = sorted({*cand["ticker"], cfg.benchmark})
     raw = prices.download_prices(tickers, cfg.price_start, cfg.price_end, cfg.raw_dir / "prices")

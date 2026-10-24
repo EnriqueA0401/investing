@@ -39,6 +39,9 @@ FLOW_TAGS = (
     "NetIncomeLoss",
     "NetCashProvidedByUsedInOperatingActivities",
     "PaymentsToAcquirePropertyPlantAndEquipment",
+    # Share-count fallbacks for multi-class issuers, whose cover-page share counts are
+    # reported per class (dimensional facts are absent from companyfacts).
+    "WeightedAverageNumberOfSharesOutstandingBasic",
 )
 INSTANT_TAGS = (
     "Assets",
