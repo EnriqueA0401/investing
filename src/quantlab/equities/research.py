@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 from itertools import pairwise
+from pathlib import Path
 from typing import Any, cast
 
 import numpy as np
@@ -190,3 +191,54 @@ def run_equity_holdout(
     }
     (out / "holdout_tests.json").write_text(json.dumps(tests, indent=2, default=float))
     return res
+
+
+def strategy_vs_spy_figure(
+    research: pd.DataFrame, holdout: pd.DataFrame, name: str, aum: float, out: Path
+) -> None:
+    """Growth of the fund AUM (research then holdout, chained) and drawdowns vs SPY."""
+    import matplotlib.pyplot as plt  # noqa: PLC0415
+    from matplotlib.ticker import FixedLocator, FuncFormatter, NullLocator  # noqa: PLC0415
+
+    from quantlab.report_figures import GRID, SERIES, TEXT, _style, _x, _year_ticks  # noqa: PLC0415
+
+    _style()
+    df = pd.concat([research[[name, "SPY"]], holdout[[name, "SPY"]]]).sort_index()
+    df = df[~df.index.duplicated()]
+    wealth = (1 + df).cumprod() * aum
+    dd = wealth / wealth.cummax() - 1
+    x = [_x(d) for d in df.index]
+    colors = {name: SERIES["H4-IV-TS12"], "SPY": "#3b3a36"}
+    labels = {name: f"{name} (long/short neutral)", "SPY": "SPY (benchmark)"}
+    fig, (ax1, ax2) = plt.subplots(
+        2, 1, figsize=(9, 6.4), sharex=True, gridspec_kw={"height_ratios": [2.2, 1]}
+    )
+    for c in (name, "SPY"):
+        ls = "--" if c == "SPY" else "-"
+        ax1.plot(x, wealth[c] / 1e6, color=colors[c], lw=1.6, ls=ls, label=labels[c])
+        ax2.plot(x, dd[c] * 100, color=colors[c], lw=1.2, ls=ls)
+        ax1.annotate(
+            f"${wealth[c].iloc[-1] / 1e6:,.1f}M",
+            xy=(x[-1], wealth[c].iloc[-1] / 1e6),
+            xytext=(6, 0),
+            textcoords="offset points",
+            va="center",
+            color=TEXT,
+            fontsize=8.5,
+        )
+    x_hold = _x(holdout.index[0])
+    for ax in (ax1, ax2):
+        ax.axvline(x_hold, color=GRID, lw=1.2, ls=":")
+    ax1.text(x_hold, ax1.get_ylim()[1], "  holdout →", va="top", color=TEXT, fontsize=8.5)
+    ax1.set_yscale("log")
+    ax1.yaxis.set_major_locator(FixedLocator([10, 15, 20, 30, 40, 60]))
+    ax1.yaxis.set_minor_locator(NullLocator())
+    ax1.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f"${v:,.0f}M"))
+    ax1.set_title(f"Value of ${aum / 1e6:.0f}M, net of costs (log scale)")
+    ax1.legend(loc="upper left")
+    ax1.set_xlim(x[0], x[-1] + 0.08 * (x[-1] - x[0]))
+    ax2.set_title("Drawdown from peak (%)", fontsize=10)
+    _year_ticks(ax2, 2012, 2026, 2)
+    fig.tight_layout()
+    fig.savefig(out, dpi=160)
+    plt.close(fig)
