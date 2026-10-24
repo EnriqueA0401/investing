@@ -23,3 +23,6 @@ runs/
 .vscode/
 # Raw vendor downloads (large, re-fetchable); derived snapshots are committed.
 data/raw/
+
+# Live run logs (rewritten while a study runs; results live in research/results/*/)
+research/results/*_run.log
