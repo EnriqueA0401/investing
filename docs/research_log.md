@@ -325,3 +325,39 @@ used):
   hashes are identical. No config is added or changed.
 - The study is re-run in full. The 4 completed configurations reproduce with the same hash, so the
   trial count does not grow.
+
+## 2026-10-24: Equity study, validation (research window 2012–2022)
+11 configurations, all of them `ok` in the ledger.
+
+| Config | Sharpe | DSR | Sharpe after survivorship drag | Subperiods > 0 | FF5+UMD alpha (t) |
+|---|---|---|---|---|---|
+| S-LVOL | 0.60 | 0.70 | 0.40 | 3/4 | +0.8% (0.39) |
+| S-MOM | 0.37 | 0.41 | 0.22 | 3/4 | +1.8% (0.80) |
+| S-COMP | 0.27 | 0.29 | 0.06 | 3/4 | −2.3% (−1.20) |
+| S-COMP-MACRO | 0.26 | 0.28 | 0.04 | 2/4 | −1.8% (−1.04) |
+| S-ML-GBM | 0.20 | 0.21 | −0.04 | 2/4 | +1.7% (0.85) |
+| S-RMOM | 0.12 | 0.15 | −0.08 | 2/4 | −1.4% (−0.71) |
+| S-QUAL | 0.00 | 0.08 | −0.27 | 2/4 | −1.0% (−0.62) |
+| S-VAL | −0.03 | 0.06 | −0.23 | 2/4 | −1.5% (−0.71) |
+| S-COMP-OPT | −0.11 | 0.04 | −0.25 | 1/4 | −2.7% (−0.79) |
+| S-ML-RIDGE | −0.14 | 0.03 | −0.34 | 2/4 | −1.0% (−0.44) |
+| S-INV | −0.36 | 0.00 | −0.60 | 2/4 | −3.2% (−1.84) |
+
+- DSR hurdle: Sharpe of 0.44 after 11 trials. **PBO = 0.19.**
+- **Verdict: no configuration validated.** No DSR reaches 0.95 and no alpha reaches t ≥ 2.
+- **Refutation check:** the loadings point the way the literature says (S-MOM on UMD +0.48, S-INV on CMA
+  +0.29, S-QUAL on RMW +0.19, S-VAL on HML +0.17) and market beta is close to 0. The construction is
+  correct; the weak result is genuine.
+- **Context:** value and investment had their worst decade in large caps over these years. The 2020
+  "quant winter" hit S-COMP at −19% and S-COMP-OPT at −24%.
+- Costs: 0.7–1.6% a year, with one-way turnover of 3–8× a year. They are not the main cause, since
+  gross returns are also small.
+- **Pre-registered rule:** S-LVOL (highest DSR, "not validated") is evaluated once in the holdout.
+- Before that comes robustness on the research window. Its grid is fixed in `equity_variants`:
+  - Costs ×3 and borrow fees ×3/×6.
+  - 5-day lag.
+  - Quarterly rebalancing.
+  - AUM of 1e8/1e9.
+  - No vol target.
+  - 25/60 names per side.
+- The ML IC diagnostic (CPCV vs walk-forward) also runs then.
