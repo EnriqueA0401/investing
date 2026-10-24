@@ -30,3 +30,4 @@ reproduce:          ## full study from the committed snapshot (ledger-idempotent
 	uv run quantlab holdout configs/study.yaml --experiment H4-IV-TS12 \
 		--unlock-holdout "reproduction of the pre-registered single holdout evaluation"
 	uv run quantlab finalize configs/study.yaml
+	uv run quantlab oos-vs configs/study.yaml

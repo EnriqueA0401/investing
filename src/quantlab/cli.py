@@ -7,7 +7,7 @@ import json
 from collections.abc import Sequence
 from pathlib import Path
 
-from quantlab import registry
+from quantlab import oos_vs_benchmark, registry
 from quantlab.analysis import evaluate_study
 from quantlab.config import load_config
 from quantlab.data.quality import data_quality_report
@@ -123,6 +123,18 @@ def _cmd_finalize(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_oos_vs(args: argparse.Namespace) -> int:
+    study = load_study(args.study)
+    cfg = study.configs["B-EW"]
+    data, _ = load_data(cfg)
+    tables = oos_vs_benchmark.run(
+        study.output_dir / "holdout", data, cfg.fund.aum_usd, Path(args.figure), args.benchmark
+    )
+    for name, t in tables.items():
+        print(f"== {name}\n{t.round(4).to_string()}\n")
+    return 0
+
+
 def _cmd_trials(args: argparse.Namespace) -> int:
     ledger = TrialLedger(Path(args.ledger))
     print(
@@ -137,7 +149,7 @@ def _cmd_trials(args: argparse.Namespace) -> int:
     return 0
 
 
-def main(argv: Sequence[str] | None = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:  # noqa: PLR0915 - flat argparse wiring
     parser = argparse.ArgumentParser(prog="quantlab")
     parser.add_argument("--log-level", default="INFO")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -187,6 +199,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     fz.add_argument("study")
     fz.add_argument("--figures", default="docs/report/figures")
     fz.set_defaults(func=_cmd_finalize)
+
+    ob = sub.add_parser("oos-vs", help="holdout comparison against a single-asset benchmark")
+    ob.add_argument("study")
+    ob.add_argument("--benchmark", default="SPY")
+    ob.add_argument("--figure", default="docs/report/figures/oos_pnl_vs_spy.png")
+    ob.set_defaults(func=_cmd_oos_vs)
 
     t = sub.add_parser("trials", help="multiple-testing trial counts from the ledger")
     t.add_argument("--ledger", default="research/trials.jsonl")
