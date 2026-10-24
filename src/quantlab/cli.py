@@ -152,6 +152,32 @@ def _cmd_validate_equity(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_equity_robustness(args: argparse.Namespace) -> int:
+    from quantlab.equities.research import run_equity_robustness  # noqa: PLC0415
+
+    study = load_study(args.study)
+    out = run_equity_robustness(study, _selected(study.output_dir))
+    print(json.dumps(out, indent=2, default=float))
+    return 0
+
+
+def _cmd_equity_holdout(args: argparse.Namespace) -> int:
+    import pandas as pd  # noqa: PLC0415
+
+    from quantlab.equities.research import run_equity_holdout  # noqa: PLC0415
+    from quantlab.equities.sources import french_daily_factors  # noqa: PLC0415
+
+    study = load_study(args.study)
+    selected = _selected(study.output_dir)
+    if args.experiment != selected:
+        raise SystemExit(f"pre-registered rule selected {selected}, not {args.experiment}")
+    res = run_equity_holdout(
+        study, selected, args.unlock_holdout, french_daily_factors(), pd.read_csv(args.coverage)
+    )
+    print(json.dumps(res.metrics, indent=2))
+    return 0
+
+
 def _cmd_trials(args: argparse.Namespace) -> int:
     ledger = TrialLedger(Path(args.ledger))
     print(
@@ -228,6 +254,17 @@ def main(argv: Sequence[str] | None = None) -> int:  # noqa: PLR0915 - flat argp
     ve.add_argument("--coverage", default="research/results/equity_data/survivorship_coverage.csv")
     ve.add_argument("--ledger", default="research/trials.jsonl")
     ve.set_defaults(func=_cmd_validate_equity)
+
+    er = sub.add_parser("equity-robustness", help="equity study post-selection robustness")
+    er.add_argument("study", nargs="?", default="configs/equities/study.yaml")
+    er.set_defaults(func=_cmd_equity_robustness)
+
+    eh = sub.add_parser("equity-holdout", help="THE single equity holdout evaluation")
+    eh.add_argument("study", nargs="?", default="configs/equities/study.yaml")
+    eh.add_argument("--experiment", required=True)
+    eh.add_argument("--unlock-holdout", required=True, metavar="REASON")
+    eh.add_argument("--coverage", default="research/results/equity_data/survivorship_coverage.csv")
+    eh.set_defaults(func=_cmd_equity_holdout)
 
     t = sub.add_parser("trials", help="multiple-testing trial counts from the ledger")
     t.add_argument("--ledger", default="research/trials.jsonl")

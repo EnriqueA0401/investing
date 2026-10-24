@@ -1,0 +1,4 @@
+/home/user/investing/src/quantlab/equities/factors.py:189: RuntimeWarning: Mean of empty slice
+  xbar, ybar = np.nanmean(xm, axis=0), np.nanmean(ym, axis=0)
+/home/user/investing/src/quantlab/equities/factors.py:189: RuntimeWarning: Mean of empty slice
+  xbar, ybar = np.nanmean(xm, axis=0), np.nanmean(ym, axis=0)
