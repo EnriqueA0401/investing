@@ -13,6 +13,7 @@ from quantlab.data.market_data import MarketData
 from quantlab.equities.portfolio import (
     LSOptimizer,
     beta_neutralize,
+    cap_net_exposure,
     neutralize,
     pca_risk_model,
 )
@@ -171,3 +172,12 @@ def test_credit_regime_halves_in_stress() -> None:
         "risk", ComponentSpec(name="credit_regime", params={"lookback_days": 200})
     ).adjust(w, ctx)
     assert out.abs().sum() == pytest.approx(0.05)  # spread trending up -> z > 1
+
+
+def test_net_cap_prevails_over_beta_neutrality() -> None:
+    w = pd.Series({"a": 0.5, "b": 0.5, "c": -0.2, "d": -0.2})
+    out = cap_net_exposure(w, 0.5)
+    assert out.sum() == pytest.approx(0.5)
+    assert out[["c", "d"]].tolist() == [-0.2, -0.2]
+    untouched = pd.Series({"a": 0.5, "c": -0.4})
+    pd.testing.assert_series_equal(cap_net_exposure(untouched, 0.5), untouched)

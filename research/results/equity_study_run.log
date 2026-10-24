@@ -2,3 +2,40 @@
   xbar, ybar = np.nanmean(xm, axis=0), np.nanmean(ym, axis=0)
 /home/user/investing/src/quantlab/equities/factors.py:189: RuntimeWarning: Mean of empty slice
   xbar, ybar = np.nanmean(xm, axis=0), np.nanmean(ym, axis=0)
+/home/user/investing/src/quantlab/equities/factors.py:189: RuntimeWarning: Mean of empty slice
+  xbar, ybar = np.nanmean(xm, axis=0), np.nanmean(ym, axis=0)
+/home/user/investing/src/quantlab/equities/factors.py:140: RuntimeWarning: Mean of empty slice
+  xbar, ybar = np.nanmean(xm, axis=0), np.nanmean(ym, axis=0)
+/home/user/investing/.venv/lib/python3.13/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+/home/user/investing/src/quantlab/equities/factors.py:189: RuntimeWarning: Mean of empty slice
+  xbar, ybar = np.nanmean(xm, axis=0), np.nanmean(ym, axis=0)
+/home/user/investing/src/quantlab/equities/factors.py:189: RuntimeWarning: Mean of empty slice
+  xbar, ybar = np.nanmean(xm, axis=0), np.nanmean(ym, axis=0)
+/home/user/investing/.venv/lib/python3.13/site-packages/numpy/lib/_nanfunctions_impl.py:1997: RuntimeWarning: Degrees of freedom <= 0 for slice.
+  var = nanvar(a, axis=axis, dtype=dtype, out=out, ddof=ddof,
+Traceback (most recent call last):
+  File "/home/user/investing/.venv/bin/quantlab", line 10, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/home/user/investing/src/quantlab/cli.py", line 239, in main
+    ho.set_defaults(func=_cmd_holdout)
+               ^^^^^^^^^^^^^^^
+  File "/home/user/investing/src/quantlab/cli.py", line 69, in _cmd_study
+    results = run_study(study, only=args.only or None)
+  File "/home/user/investing/src/quantlab/study.py", line 61, in run_study
+    results[exp_id] = run_experiment(study.configs[exp_id], stage=stage, data=data)
+                      ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/user/investing/src/quantlab/pipeline.py", line 254, in run_experiment
+    targets = generate_targets(
+        view,
+    ...<6 lines>...
+        start=start,
+    )
+  File "/home/user/investing/src/quantlab/pipeline.py", line 173, in generate_targets
+    check_constraints(weights, config.constraints, investable)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/user/investing/src/quantlab/components/portfolios.py", line 40, in check_constraints
+    raise ConstraintViolationError(f"net exposure {weights.sum():.4f} above limit")
+quantlab.components.portfolios.ConstraintViolationError: net exposure 0.5112 above limit
+exit 1

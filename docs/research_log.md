@@ -312,3 +312,16 @@ used):
 - Coverage of the true top 1000: 61% in 2012, 66% in 2015, 75% in 2018, 84% in 2021, 86% in 2022.
 - *Side effect of survivorship:* our universe goes deeper than the real Russell 1000. The 1000th
   name is worth $0.66B in 2012, against ~$1.5–2B in reality, because survivors fill the gaps.
+
+## 2026-10-24: Equity study run, implementation clarification
+- In the first run, S-VAL, S-QUAL, S-MOM and S-RMOM completed. **S-LVOL failed** with a mandate
+  violation: net exposure was 51%, against a 50% cap. It is recorded as `failed` in the ledger and does
+  not count as a trial.
+- **Cause:** the pre-registered spec asked for both beta neutralization (shrinking the higher-beta side)
+  and |net| ≤ 50%. For low-beta vs high-beta they conflict (long beta ~0.6 vs short beta ~1.5).
+- **Clarification:** the mandate limit prevails. If the net exposure breaches the cap, the larger side
+  is shrunk until it fits, accepting a residual beta. This only acts where the mandate would otherwise
+  be breached. The configurations that had already completed never breached it, so their results and
+  hashes are identical. No config is added or changed.
+- The study is re-run in full. The 4 completed configurations reproduce with the same hash, so the
+  trial count does not grow.

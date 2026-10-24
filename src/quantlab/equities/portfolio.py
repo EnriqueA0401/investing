@@ -238,6 +238,22 @@ def beta_neutralize(w: pd.Series, beta: pd.Series, gross_cap: float) -> pd.Serie
     return out * min(1.0, gross_cap / side_gross) if side_gross > 0 else out
 
 
+def cap_net_exposure(w: pd.Series, max_net: float | None) -> pd.Series:
+    """Mandate limits prevail over beta neutrality: if |net| exceeds the cap, shrink
+    the larger side until it fits (accepting a residual beta). Only binds when beta
+    neutralization would otherwise breach the limit (e.g. low-beta vs high-beta)."""
+    if max_net is None:
+        return w
+    long_g, short_g = float(w[w > 0].sum()), float(-w[w < 0].sum())
+    net = long_g - short_g
+    out = w.copy()
+    if net > max_net and long_g > 0:
+        out[out > 0] *= (short_g + max_net) / long_g
+    elif -net > max_net and short_g > 0:
+        out[out < 0] *= (long_g + max_net) / short_g
+    return out
+
+
 @register("portfolio", "ls_sector_neutral")
 class LSSectorNeutral(PortfolioConstructor):
     """Top/bottom ``n`` per side, allocated across sectors in proportion to sector
@@ -276,6 +292,7 @@ class LSSectorNeutral(PortfolioConstructor):
         w[longs] = p.gross_per_side / len(longs)
         w[shorts] = -p.gross_per_side / len(shorts)
         w = beta_neutralize(w, _beta_row(ctx, p.beta_feature, w.index), p.gross_per_side)
+        w = cap_net_exposure(w, ctx.constraints.max_net_exposure)
         cap = ctx.constraints.max_weight
         return w[w != 0].clip(lower=-cap, upper=cap)
 
