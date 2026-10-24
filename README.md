@@ -12,6 +12,11 @@ testing y costes siempre incluidos.
 > defendible (PBO 0.60, mejor p = 0.095). El candidato seleccionado rindió por debajo
 > de equal-weight y del 60/40 en el holdout. Recomendación: cartera de política
 > equal-weight.
+>
+> **Estudio de acciones (long/short neutral, Russell-1000-like):
+> [`docs/report/EQUITY_REPORT.md`](docs/report/EQUITY_REPORT.md).** Ninguna de las 11
+> configuraciones se valida (mejor DSR 0.70). La seleccionada (S-LVOL) protegió en caídas, pero
+> en el holdout tuvo Sharpe −0.41 frente a 1.01 de SPY.
 
 ## Mandato (fijado en Fase 0, antes de mirar datos)
 

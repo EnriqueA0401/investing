@@ -361,3 +361,18 @@ used):
   - No vol target.
   - 25/60 names per side.
 - The ML IC diagnostic (CPCV vs walk-forward) also runs then.
+
+### 2026-10-24: Equity robustness, ML diagnostic and holdout (S-LVOL)
+
+- **Robustness (research window, post-selection):** S-LVOL Sharpe holds at 0.49–0.66 across the
+  fixed grid (costs ×3 0.49, borrow ×3/×6 0.56/0.49, lag 5d 0.51, quarterly 0.62, AUM 1e8/1e9
+  0.58/0.52, no vol target 0.55, 25/60 per side 0.66/0.58). Not a parameter artifact within research.
+- **ML IC diagnostic:** CPCV ridge IC −0.006 vs composite 0.012 (ridge wins 0/5 paths); strict
+  walk-forward 0.006 vs 0.010 (t −0.3); coefficient sign flips up to 14 per feature. The skeptical
+  thesis is **not refuted**: no learned model is adopted.
+- **Holdout (opened once, ledgered unlock; contamination warning expected, as declared in the plan):**
+  S-LVOL CAGR 0.6%, Sharpe −0.41, max DD −18.5%, beta −0.10 vs SPY CAGR 20.0%, Sharpe 1.01. PSR 0.22;
+  Sharpe after drag −0.63. Positive in 6 of 7 SPY drops > 5% (Feb–Apr 2025: +1.9% vs −18.8%).
+- **Conclusion:** no validated edge in the equity study. S-LVOL behaved as a crash hedge, not as a
+  return source, and earned less than cash out of sample. Committee report:
+  `docs/report/EQUITY_REPORT.md`.
