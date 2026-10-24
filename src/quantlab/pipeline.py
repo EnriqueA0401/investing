@@ -18,7 +18,7 @@ import pandas as pd
 from quantlab import registry
 from quantlab.calendar import rebalance_dates
 from quantlab.components.portfolios import FixedWeights, check_constraints
-from quantlab.config import ComponentSpec, ExperimentConfig
+from quantlab.config import ComponentSpec, ExperimentConfig, PortfolioConstraints
 from quantlab.contracts import (
     Backtester,
     BacktestResult,
@@ -176,6 +176,14 @@ def generate_targets(
     return targets
 
 
+def reference_constraints(config: ExperimentConfig, max_weight: float) -> PortfolioConstraints:
+    """Benchmark and baseline are long-only, unlevered policy portfolios whatever the
+    strategy's mandate (e.g. SPY 100% would breach a market-neutral net cap)."""
+    if config.constraints.long_only:
+        return config.constraints.model_copy(update={"max_weight": max_weight})
+    return PortfolioConstraints(long_only=True, max_gross_leverage=1.0, max_weight=max_weight)
+
+
 def investable_names(hist: MarketData, config: ExperimentConfig) -> list[str]:
     """Names a strategy may hold at ``hist.end`` (all inputs observable by then)."""
     u = config.universe
@@ -262,7 +270,7 @@ def run_experiment(
                 "execution": config.execution.model_copy(
                     update={"rebalance_frequency": config.benchmark.rebalance_frequency}
                 ),
-                "constraints": config.constraints.model_copy(update={"max_weight": 1.0}),
+                "constraints": reference_constraints(config, max_weight=1.0),
             }
         )
         bench_targets = generate_targets(
@@ -278,9 +286,12 @@ def run_experiment(
         )
         benchmark = comps.backtester.run(bench_targets, view, comps.cost_model, bench_cfg, start)
 
+        base_cfg = config.model_copy(
+            update={"constraints": reference_constraints(config, config.constraints.max_weight)}
+        )
         base_targets = generate_targets(
             view,
-            config,
+            base_cfg,
             signal=registry.build("signal", ComponentSpec(name="uniform")),
             portfolio=registry.build("portfolio", config.baseline),
             factors=[],
@@ -288,7 +299,7 @@ def run_experiment(
             rng=rng,
             start=start,
         )
-        baseline = comps.backtester.run(base_targets, view, comps.cost_model, config, start)
+        baseline = comps.backtester.run(base_targets, view, comps.cost_model, base_cfg, start)
 
         metrics = comps.evaluator.evaluate(strategy, benchmark)
         base_metrics = comps.evaluator.evaluate(baseline, benchmark)
