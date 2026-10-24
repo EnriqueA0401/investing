@@ -275,3 +275,25 @@ Notas de ingeniería:
   (test de regresión).
 - Los factores con test de causalidad se precomputan una sola vez. Es equivalente por construcción
   y evita O(T²).
+
+### Data defects found before any stock backtest
+These came up when sanity-checking the first snapshot (`821e3d1c…`, discarded without being
+used):
+1. **XOM, GOOGL, META and WBA were missing from the data.**
+   - **GOOGL/META:** companies with several share classes report cover-page shares per class. Those
+     dimensional facts are absent from companyfacts, so they had no share count and therefore no
+     market cap. *Fix:* chain cover-page → balance-sheet → weighted-average basic shares (new
+     extracted tag).
+   - **XOM** (and Disney, Medtronic): reorganizations moved the listed company onto a **new CIK**
+     with no history. *Fix:* link predecessor CIKs by name similarity (≥ 0.85, ignoring legal
+     suffixes) and by the timing between the last old filing and the first new one. Google → Alphabet
+     is **not** caught (the name changed), so GOOGL enters the universe late; documented limitation.
+   - **WBA:** taken private in 2025. Real survivorship, which is expected.
+2. **Survivorship coverage** (the share of the true top 1000 by float that we can price): 60% in
+   2012, 68% in 2016, 81% in 2020, 86% in 2022.
+   - Part of the "missing" are reorganizations and subsidiaries that file their own 10-K, so it
+     overstates the bias. The pre-registered penalty is therefore conservative.
+   - The float-weighted coverage is unusable because of unit errors in `EntityPublicFloat` (Viacom
+     shows "$12 trillion"). Only the count measure is used, as planned.
+3. **Latent bug in the price cache:** it was indexed by chunk position and would have silently
+   dropped tickers if the candidate list changed. It is now keyed by content.
