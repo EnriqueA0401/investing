@@ -1,0 +1,106 @@
+# Pre-registered equity candidate set — docs/hypotheses/equities/STUDY_PLAN.md §4.
+# Adding an entry REQUIRES registering it there first; every run is ledgered.
+base: base.yaml
+output_dir: ../../research/results/equity_study
+
+factor_sets:
+  ep: &ep {name: fundamental_ratio, params: {label: ep, numerator: net_income_ttm, denominator: market_cap}}
+  cfp: &cfp {name: fundamental_ratio, params: {label: cfp, numerator: cfo_ttm, denominator: market_cap}}
+  bp: &bp {name: fundamental_ratio, params: {label: bp, numerator: equity, denominator: market_cap}}
+  gpa: &gpa {name: fundamental_ratio, params: {label: gpa, numerator: gross_profit_ttm, denominator: assets}}
+  roe: &roe {name: fundamental_ratio, params: {label: roe, numerator: net_income_ttm, denominator: equity}}
+  acc: &acc {name: accruals, params: {label: accruals}}
+  mom: &mom {name: price_momentum, params: {label: mom_12_1}}
+  rmom: &rmom {name: residual_momentum, params: {label: resid_mom}}
+  beta: &beta {name: market_beta, params: {label: beta_252, kind: beta}}
+  vol: &vol {name: market_beta, params: {label: vol_252, kind: vol}}
+  ag: &ag {name: asset_growth, params: {label: asset_growth}}
+
+all_factors: &all_factors [*ep, *cfp, *bp, *gpa, *roe, *acc, *mom, *rmom, *beta, *vol, *ag]
+
+# Five themes, equal weight; each theme splits its weight across its signals.
+composite: &composite
+  {ep: 0.3333, cfp: 0.3333, bp: 0.3333, gpa: 0.3333, roe: 0.3333, accruals: -0.3333,
+   mom_12_1: 0.5, resid_mom: 0.5, beta_252: -0.5, vol_252: -0.5, asset_growth: -1.0}
+
+ls: &ls {name: ls_sector_neutral, params: {n_per_side: 40, gross_per_side: 1.0, beta_feature: beta_252}}
+vt: &vt {name: vol_target, params: {target_vol: 0.10, window_days: 63}}
+
+experiments:
+  S-VAL:
+    hypothesis_ids: [S-VAL]
+    pipeline:
+      factors: [*ep, *cfp, *bp, *beta]
+      signal: {name: neutral_composite, params: {features: {ep: 1.0, cfp: 1.0, bp: 1.0}, min_features: 2}}
+      portfolio: *ls
+      risk: [*vt]
+  S-QUAL:
+    hypothesis_ids: [S-QUAL]
+    pipeline:
+      factors: [*gpa, *roe, *acc, *beta]
+      signal: {name: neutral_composite, params: {features: {gpa: 1.0, roe: 1.0, accruals: -1.0}, min_features: 2}}
+      portfolio: *ls
+      risk: [*vt]
+  S-MOM:
+    hypothesis_ids: [S-MOM]
+    pipeline:
+      factors: [*mom, *beta]
+      signal: {name: neutral_composite, params: {features: {mom_12_1: 1.0}}}
+      portfolio: *ls
+      risk: [*vt]
+  S-RMOM:
+    hypothesis_ids: [S-MOM]
+    pipeline:
+      factors: [*rmom, *beta]
+      signal: {name: neutral_composite, params: {features: {resid_mom: 1.0}}}
+      portfolio: *ls
+      risk: [*vt]
+  S-LVOL:
+    hypothesis_ids: [S-LVOL]
+    pipeline:
+      factors: [*beta, *vol]
+      signal: {name: neutral_composite, params: {features: {beta_252: -1.0, vol_252: -1.0}, min_features: 2}}
+      portfolio: *ls
+      risk: [*vt]
+  S-INV:
+    hypothesis_ids: [S-INV]
+    pipeline:
+      factors: [*ag, *beta]
+      signal: {name: neutral_composite, params: {features: {asset_growth: -1.0}}}
+      portfolio: *ls
+      risk: [*vt]
+  S-COMP:
+    hypothesis_ids: [S-COMP]
+    pipeline:
+      factors: *all_factors
+      signal: {name: neutral_composite, params: {features: *composite, min_features: 6}}
+      portfolio: *ls
+      risk: [*vt]
+  S-COMP-OPT:
+    hypothesis_ids: [S-COMP]
+    pipeline:
+      factors: *all_factors
+      signal: {name: neutral_composite, params: {features: *composite, min_features: 6}}
+      portfolio: {name: ls_optimizer, params: {information_coefficient: 0.03, target_vol: 0.10, gross: 2.0, n_factors: 15, tc_bps: 10.0}}
+      risk: []
+  S-COMP-MACRO:
+    hypothesis_ids: [S-COMP, S-MACRO]
+    pipeline:
+      factors: *all_factors
+      signal: {name: neutral_composite, params: {features: *composite, min_features: 6}}
+      portfolio: *ls
+      risk: [*vt, {name: credit_regime, params: {series: BAA10Y, lookback_days: 756, z_threshold: 1.0, scale: 0.5}}]
+  S-ML-GBM:
+    hypothesis_ids: [S-ML]
+    pipeline:
+      factors: *all_factors
+      signal: {name: ml_rank, params: {features: *composite, model: gbm, min_train_months: 36, retrain_months: 12, min_features: 6}}
+      portfolio: *ls
+      risk: [*vt]
+  S-ML-RIDGE:
+    hypothesis_ids: [S-ML]
+    pipeline:
+      factors: *all_factors
+      signal: {name: ml_rank, params: {features: *composite, model: ridge, min_train_months: 36, retrain_months: 12, min_features: 6}}
+      portfolio: *ls
+      risk: [*vt]

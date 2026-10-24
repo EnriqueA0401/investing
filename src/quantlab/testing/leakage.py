@@ -43,7 +43,23 @@ def _scramble_after(data: MarketData, t: pd.Timestamp, rng: np.random.Generator)
         cash_return=None
         if data.cash_return is None
         else data.cash_return.where(~future, rng.normal(0.0, 1e-3, size=len(future))),
+        fundamentals={k: _noise_after(v, t, rng) for k, v in data.fundamentals.items()},
+        universe=None if data.universe is None else _flip_after(data.universe, t),
+        extras={k: _noise_after(v.to_frame(), t, rng).iloc[:, 0] for k, v in data.extras.items()},
     )
+
+
+def _flip_after(universe: pd.DataFrame, t: pd.Timestamp) -> pd.DataFrame:
+    out = universe.copy()
+    out.loc[out.index > t] = ~out.loc[out.index > t].astype(bool)
+    return out
+
+
+def _noise_after(df: pd.DataFrame, t: pd.Timestamp, rng: np.random.Generator) -> pd.DataFrame:
+    out = df.copy()
+    future = out.index > t
+    out.loc[future] = rng.normal(0.0, 1.0, size=(int(future.sum()), out.shape[1]))
+    return out
 
 
 def _as_frame(x: pd.DataFrame | pd.Series) -> pd.DataFrame:

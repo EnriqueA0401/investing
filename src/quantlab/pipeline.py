@@ -128,21 +128,29 @@ def generate_targets(
     risk: list[RiskManager],
     rng: np.random.Generator,
     start: pd.Timestamp,
+    respect_universe: bool = True,
 ) -> dict[pd.Timestamp, pd.Series]:
-    """Walk the rebalance schedule, deciding each target from ``data.asof(t)`` only."""
+    """Walk the rebalance schedule, deciding each target from ``data.asof(t)`` only.
+
+    ``respect_universe=False`` (reference portfolios such as the benchmark) skips
+    tradability, membership and liquidity screens."""
     schedule = rebalance_dates(data.dates, config.execution.rebalance_frequency)
     schedule = schedule[schedule >= start]
     targets: dict[pd.Timestamp, pd.Series] = {}
     prev = pd.Series(dtype=float)
     prev_t: pd.Timestamp | None = None
-    tradable = set(config.universe.tradable_tickers)
+    cache = {f.label: f.compute(data) for f in factors if f.precomputable}
     for ts in schedule:
         t = pd.Timestamp(ts)
         hist = data.asof(t)
-        investable = [a for a in hist.investable(config.universe.min_history_days) if a in tradable]
+        investable = (
+            investable_names(hist, config)
+            if respect_universe
+            else hist.investable(config.universe.min_history_days)
+        )
         features: dict[str, pd.DataFrame] = {}
         for f in factors:
-            panel = f.compute(hist)
+            panel = cache[f.label].loc[:t] if f.label in cache else f.compute(hist)
             if panel.index.max() > t:
                 raise RuntimeError(f"factor {f.label} emitted rows after {t.date()}")
             if f.label in features:
@@ -166,6 +174,31 @@ def generate_targets(
         targets[t] = weights
         prev, prev_t = weights, t
     return targets
+
+
+def investable_names(hist: MarketData, config: ExperimentConfig) -> list[str]:
+    """Names a strategy may hold at ``hist.end`` (all inputs observable by then)."""
+    u = config.universe
+    names = hist.investable(u.min_history_days)
+    if u.source == "data":
+        blocked = {a.ticker for a in u.assets if not a.tradable}
+        names = [n for n in names if n not in blocked]
+    else:
+        allowed = set(u.tradable_tickers)
+        names = [n for n in names if n in allowed]
+    if u.use_membership:
+        if hist.universe is None or hist.universe.empty:
+            return []
+        row = hist.universe.iloc[-1]
+        names = [n for n in names if bool(row.get(n, False))]
+    if u.exclude_asset_classes:
+        names = [n for n in names if hist.asset_class.get(n) not in u.exclude_asset_classes]
+    if u.min_price > 0 or u.min_adv_usd > 0:
+        px = hist.close[names].iloc[-1]
+        adv = (hist.close[names] * hist.volume[names]).iloc[-63:].mean()
+        ok = (px >= u.min_price) & (adv >= u.min_adv_usd)
+        names = [n for n in names if bool(ok.get(n, False))]
+    return names
 
 
 def drift_weights(weights: pd.Series, hist: MarketData, since: pd.Timestamp | None) -> pd.Series:
@@ -241,6 +274,7 @@ def run_experiment(
             risk=[],
             rng=rng,
             start=start,
+            respect_universe=False,
         )
         benchmark = comps.backtester.run(bench_targets, view, comps.cost_model, bench_cfg, start)
 

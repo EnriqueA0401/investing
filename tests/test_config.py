@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
 
 from quantlab.config import ExperimentConfig, load_config
+from quantlab.study import load_study
 from tests.conftest import ROOT
 
 
@@ -72,3 +74,17 @@ def test_circular_extends_detected(tmp_path: Path) -> None:
     (tmp_path / "b.yaml").write_text("extends: a.yaml\n")
     with pytest.raises(ValueError, match="circular"):
         load_config(tmp_path / "a.yaml")
+
+
+def test_ledgered_study_hashes_are_stable() -> None:
+    """Adding config fields must not change hashes already recorded in the trial ledger."""
+    ledger = (ROOT / "research" / "trials.jsonl").read_text().splitlines()
+    known = {
+        r["name"]: r["config_hash"]
+        for r in map(json.loads, ledger)
+        if r.get("event") == "trial" and r.get("stage") == "research"
+    }
+    study = load_study(ROOT / "configs" / "study.yaml")
+    assert {k: c.config_hash() for k, c in study.configs.items()} == {
+        k: known[k] for k in study.configs
+    }

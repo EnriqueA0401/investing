@@ -47,6 +47,10 @@ class SnapshotStore:
         panels = {name: getattr(data, name) for name in PANEL_FIELDS}
         if data.cash_return is not None:
             panels["cash_return"] = data.cash_return.rename("cash").to_frame()
+        panels |= {f"fund__{k}": v for k, v in data.fundamentals.items()}
+        if data.universe is not None:
+            panels["universe"] = data.universe.astype("float64")
+        panels |= {f"extra__{k}": v.rename(k).to_frame() for k, v in data.extras.items()}
         digests = {name: _frame_digest(df) for name, df in panels.items()}
         asset_class = dict(sorted(data.asset_class.items()))
         snap_id = hashlib.sha256(
@@ -95,4 +99,18 @@ class SnapshotStore:
             if _frame_digest(cash_df) != manifest["panels"]["cash_return"]:
                 raise SnapshotIntegrityError(f"snapshot {snap_id}: cash_return checksum mismatch")
             cash = cash_df["cash"]
-        return MarketData(**panels, asset_class=manifest["asset_class"], cash_return=cash)
+        aux: dict[str, pd.DataFrame] = {}
+        for name in manifest["panels"]:
+            if name.startswith(("fund__", "extra__")) or name == "universe":
+                df = pd.read_parquet(self.root / snap_id / f"{name}.parquet")
+                if _frame_digest(df) != manifest["panels"][name]:
+                    raise SnapshotIntegrityError(f"snapshot {snap_id}: '{name}' checksum mismatch")
+                aux[name] = df
+        return MarketData(
+            **panels,
+            asset_class=manifest["asset_class"],
+            cash_return=cash,
+            fundamentals={k[6:]: v for k, v in aux.items() if k.startswith("fund__")},
+            universe=aux["universe"].astype(bool) if "universe" in aux else None,
+            extras={k[7:]: v.iloc[:, 0] for k, v in aux.items() if k.startswith("extra__")},
+        )

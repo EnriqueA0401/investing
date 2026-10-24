@@ -12,11 +12,15 @@ from quantlab.components import (
     validators,
     vendors,
 )
+from quantlab.equities import factors as equity_factors
+from quantlab.equities import portfolio as equity_portfolio
 
 __all__ = [
     "backtest",
     "costs",
     "data_sources",
+    "equity_factors",
+    "equity_portfolio",
     "evaluation",
     "factors",
     "overlays",

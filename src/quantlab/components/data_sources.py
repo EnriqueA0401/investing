@@ -60,3 +60,16 @@ class SyntheticSource(DataSource):
             volume=volume,
             asset_class={a.ticker: a.asset_class for a in assets},
         )
+
+
+@register("data_source", "prebuilt_snapshot")
+class PrebuiltSnapshot(DataSource):
+    """Placeholder for datasets assembled offline (e.g. ``python -m quantlab.equities.build``).
+
+    Configs using it must pin ``data_snapshot``; fetching live is refused."""
+
+    def fetch(self, assets: Sequence[Asset], start: date, end: date | None) -> MarketData:
+        raise RuntimeError(
+            "this dataset is built offline; pin `data_snapshot` in the config "
+            "(see python -m quantlab.equities.build)"
+        )

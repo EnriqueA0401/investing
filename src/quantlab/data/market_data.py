@@ -13,6 +13,11 @@ never from price levels of an adjusted series.
 ``cash_return`` (optional) is the simple return earned by uninvested cash from
 the previous trading date to ``d``; it is the risk-free rate for excess-return
 statistics.
+
+Auxiliary point-in-time frames have their own DatetimeIndex (e.g. month-ends);
+a row dated ``d`` holds only what was public at the close of ``d``:
+``fundamentals`` (name -> dates x tickers), ``universe`` (dates x tickers bool
+membership) and ``extras`` (name -> daily series such as macro prints).
 """
 
 from __future__ import annotations
@@ -33,6 +38,9 @@ class MarketData:
     volume: pd.DataFrame
     asset_class: Mapping[str, str] = field(default_factory=dict)
     cash_return: pd.Series | None = None
+    fundamentals: Mapping[str, pd.DataFrame] = field(default_factory=dict)
+    universe: pd.DataFrame | None = None
+    extras: Mapping[str, pd.Series] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         ref = self.total_return_index
@@ -48,6 +56,15 @@ class MarketData:
                 raise ValueError(f"panel '{name}' is not aligned with total_return_index")
         if self.cash_return is not None and not self.cash_return.index.equals(ref.index):
             raise ValueError("cash_return is not aligned with total_return_index")
+        aux: list[pd.DataFrame | pd.Series] = [*self.fundamentals.values(), *self.extras.values()]
+        if self.universe is not None:
+            aux.append(self.universe)
+        for frame in aux:
+            if (
+                not isinstance(frame.index, pd.DatetimeIndex)
+                or not frame.index.is_monotonic_increasing
+            ):
+                raise ValueError("auxiliary frames need an increasing DatetimeIndex")
 
     @property
     def dates(self) -> pd.DatetimeIndex:
@@ -63,10 +80,22 @@ class MarketData:
     def end(self) -> pd.Timestamp:
         return pd.Timestamp(self.dates[-1])
 
-    def _map(self, rows: slice | np.ndarray, cols: list[str] | None = None) -> MarketData:
+    def _map(
+        self,
+        rows: slice | np.ndarray,
+        cols: list[str] | None = None,
+        hi: pd.Timestamp | None = None,
+    ) -> MarketData:
         def sub(df: pd.DataFrame) -> pd.DataFrame:
             out = df.loc[rows]
             return out if cols is None else out.loc[:, cols]
+
+        def aux_df(df: pd.DataFrame) -> pd.DataFrame:
+            out = df if hi is None else df.loc[df.index <= hi]
+            return out if cols is None else out.loc[:, [c for c in cols if c in out.columns]]
+
+        def aux_s(s: pd.Series) -> pd.Series:
+            return s if hi is None else s.loc[s.index <= hi]
 
         return MarketData(
             close=sub(self.close),
@@ -76,6 +105,9 @@ class MarketData:
             if cols is None
             else {t: self.asset_class[t] for t in cols if t in self.asset_class},
             cash_return=None if self.cash_return is None else self.cash_return.loc[rows],
+            fundamentals={k: aux_df(v) for k, v in self.fundamentals.items()},
+            universe=None if self.universe is None else aux_df(self.universe),
+            extras={k: aux_s(v) for k, v in self.extras.items()},
         )
 
     def asof(self, t: pd.Timestamp | str) -> MarketData:
@@ -83,7 +115,7 @@ class MarketData:
         mask = self.dates <= pd.Timestamp(t)
         if not mask.any():
             raise ValueError(f"no data on or before {t}")
-        return self._map(mask)
+        return self._map(mask, hi=pd.Timestamp(t))
 
     def between(
         self, start: pd.Timestamp | str | None, end: pd.Timestamp | str | None
@@ -93,7 +125,7 @@ class MarketData:
             mask &= self.dates >= pd.Timestamp(start)
         if end is not None:
             mask &= self.dates <= pd.Timestamp(end)
-        return self._map(mask)
+        return self._map(mask, hi=None if end is None else pd.Timestamp(end))
 
     def select(self, tickers: list[str]) -> MarketData:
         return self._map(slice(None), list(tickers))

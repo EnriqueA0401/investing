@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import cast
+from typing import Literal, cast
 
 import numpy as np
 import pandas as pd
@@ -33,6 +33,11 @@ class DailyDrift(Backtester):
     class Params(ComponentParams):
         adv_window: int = Field(default=20, ge=1)
         vol_window: int = Field(default=60, ge=2)
+        missing_return: Literal["raise", "zero"] = Field(
+            default="raise",
+            description="'zero': a held name with no print that day earns 0 (logged); for "
+            "single stocks where isolated vendor gaps occur.",
+        )
 
     params: Params
 
@@ -57,7 +62,7 @@ class DailyDrift(Backtester):
             fills[fill] = target.reindex(data.tickers).fillna(0.0)
         return fills
 
-    def run(
+    def run(  # noqa: PLR0915 - one explicit simulation loop reads best unsplit
         self,
         targets: Mapping[pd.Timestamp, pd.Series],
         data: MarketData,
@@ -91,17 +96,22 @@ class DailyDrift(Backtester):
         w_out = np.empty((len(sim), len(tickers)))
         turnover: dict[pd.Timestamp, float] = {}
         aum = config.fund.aum_usd
+        borrow_daily = config.costs.borrow_fee_bps_annual / 1e4 / 252
+        missing_events = 0
 
         for i, d in enumerate(sim):
             r = r_mat[i]
             held = np.abs(w) > 0
             if np.isnan(r[held]).any():
                 bad = [tickers[j] for j in np.flatnonzero(held & np.isnan(r))]
-                raise ValueError(f"{d.date()}: holding assets without a return: {bad}")
+                if self.params.missing_return == "raise":
+                    raise ValueError(f"{d.date()}: holding assets without a return: {bad}")
+                missing_events += len(bad)
             r = np.nan_to_num(r, nan=0.0)
             gross = float(w @ r) + (1.0 - float(w.sum())) * rc[i]
             w = w * (1 + r) / (1 + gross)
-            cost = 0.0
+            # Stock-loan fee accrues daily on short notional (fraction of NAV).
+            cost = float(-w[w < 0].sum()) * borrow_daily
             if d in fills:
                 tgt = fills[d].to_numpy(dtype=float)
                 trades = pd.Series(tgt - w, index=tickers)
@@ -113,7 +123,7 @@ class DailyDrift(Backtester):
                     asset_class=data.asset_class,
                     config=config.costs,
                 )
-                cost = float(cost_model.cost(trades[trades != 0], ctx).sum())
+                cost += float(cost_model.cost(trades[trades != 0], ctx).sum())
                 turnover[d] = float(trades.abs().sum() / 2)
                 w = tgt
             net = (1 + gross) * (1 - cost) - 1
@@ -121,6 +131,8 @@ class DailyDrift(Backtester):
             gross_out[i], net_out[i], cost_out[i] = gross, net, cost
             w_out[i] = w
 
+        if missing_events:
+            log.warning("held names without a print (treated as 0)", extra={"n": missing_events})
         target_frame = pd.DataFrame(fills).T.reindex(columns=tickers)
         target_frame.index.name = "fill_date"
         return BacktestResult(

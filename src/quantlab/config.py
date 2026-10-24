@@ -57,6 +57,17 @@ class UniverseConfig(_Strict):
         ge=0,
         description="Trading days of history required before an asset is investable.",
     )
+    source: Literal["static", "data"] = Field(
+        default="static",
+        description="'data': tradable names come from the dataset (single stocks); "
+        "listed assets are then reference/non-tradable entries such as the benchmark.",
+    )
+    use_membership: bool = Field(
+        default=False, description="Restrict to the dataset's point-in-time universe membership."
+    )
+    min_price: float = Field(default=0.0, ge=0)
+    min_adv_usd: float = Field(default=0.0, ge=0, description="63-day average dollar volume floor.")
+    exclude_asset_classes: tuple[str, ...] = ()
 
     @model_validator(mode="after")
     def _unique_tickers(self) -> UniverseConfig:
@@ -123,6 +134,9 @@ class CostConfig(_Strict):
     impact_coefficient: float = Field(
         default=0.1, ge=0, description="Square-root impact: k * sigma_daily * sqrt(trade / ADV)."
     )
+    borrow_fee_bps_annual: float = Field(
+        default=0.0, ge=0, description="Stock-loan fee on short notional, charged daily."
+    )
 
     @model_validator(mode="after")
     def _has_default(self) -> CostConfig:
@@ -142,6 +156,9 @@ class PortfolioConstraints(_Strict):
         default=None, gt=0, description="One-way turnover cap per rebalance (sum |dw| / 2)."
     )
     max_asset_class_weight: dict[str, float] = Field(default_factory=dict)
+    max_net_exposure: float | None = Field(
+        default=None, ge=0, description="|sum of weights| cap (market-neutral books)."
+    )
 
     @model_validator(mode="after")
     def _consistent(self) -> PortfolioConstraints:
@@ -222,10 +239,28 @@ class ExperimentConfig(_Strict):
         return self
 
     def config_hash(self) -> str:
-        """Stable hash of the full config, excluding the free-text name."""
+        """Stable hash of the full config, excluding the free-text name.
+
+        Fields added after configs were first ledgered are omitted while they hold
+        their default value, so earlier configurations keep their hashes."""
         payload = self.model_dump(mode="json", exclude={"name"})
+        for section, key, default in _LATER_FIELDS:
+            if payload.get(section, {}).get(key) == default:
+                payload[section].pop(key)
         canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(canonical.encode()).hexdigest()[:16]
+
+
+# (section, field, default) added after the ETF study was ledgered.
+_LATER_FIELDS: tuple[tuple[str, str, object], ...] = (
+    ("universe", "source", "static"),
+    ("universe", "use_membership", False),
+    ("universe", "min_price", 0.0),
+    ("universe", "min_adv_usd", 0.0),
+    ("universe", "exclude_asset_classes", []),
+    ("constraints", "max_net_exposure", None),
+    ("costs", "borrow_fee_bps_annual", 0.0),
+)
 
 
 def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:

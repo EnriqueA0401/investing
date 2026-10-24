@@ -21,3 +21,5 @@ runs/
 .DS_Store
 .idea/
 .vscode/
+# Raw vendor downloads (large, re-fetchable); derived snapshots are committed.
+data/raw/

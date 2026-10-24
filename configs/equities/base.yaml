@@ -1,0 +1,65 @@
+# Equity long/short base config — docs/hypotheses/equities/STUDY_PLAN.md.
+# Tradable names come from the snapshot's point-in-time universe; the listed
+# asset is only the (non-tradable) benchmark.
+name: equities-base
+seed: 20261024
+data_snapshot: PENDING_BUILD
+
+universe:
+  source: data
+  use_membership: true
+  min_history_days: 252
+  min_price: 5.0
+  min_adv_usd: 10000000
+  exclude_asset_classes: [Money, benchmark]
+  assets:
+    - {ticker: SPY, asset_class: equity, region: US, tradable: false}
+
+split:
+  data_start: 2009-06-01
+  research_start: 2012-01-01
+  research_end: 2022-12-31
+  holdout_start: 2023-01-01
+  holdout_end: 2026-09-30
+  embargo_days: 21
+
+execution:
+  rebalance_frequency: ME
+  execution_lag_days: 1
+
+costs:
+  half_spread_bps: {default: 3.0}   # unused by equity_liquidity (ADV tiers instead)
+  commission_bps: 0.5
+  slippage_bps: 1.0
+  impact_coefficient: 0.1
+  borrow_fee_bps_annual: 50.0
+
+constraints:
+  long_only: false
+  max_gross_leverage: 2.0
+  max_weight: 0.05
+  max_net_exposure: 0.5
+
+fund:
+  aum_usd: 10000000
+  target_volatility: 0.10
+
+benchmark:
+  weights: {SPY: 1.0}
+  rebalance_frequency: ME
+
+baseline: {name: equal_weight}
+
+pipeline:
+  data_source: {name: prebuilt_snapshot}
+  validators: []
+  signal: {name: uniform}
+  portfolio: {name: equal_weight}
+  cost_model: {name: equity_liquidity}
+  backtester: {name: daily_drift, params: {missing_return: zero}}
+  evaluator: {name: standard}
+
+tracking:
+  runs_dir: runs
+  ledger_path: research/trials.jsonl
+  snapshot_dir: data/snapshots

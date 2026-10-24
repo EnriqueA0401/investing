@@ -34,6 +34,10 @@ def check_constraints(
         raise ConstraintViolationError(
             f"short positions in long-only mandate: {weights[weights < 0]}"
         )
+    if constraints.max_net_exposure is not None and abs(weights.sum()) > (
+        constraints.max_net_exposure + 1e-6
+    ):
+        raise ConstraintViolationError(f"net exposure {weights.sum():.4f} above limit")
     if weights.abs().sum() > constraints.max_gross_leverage + _TOL:
         raise ConstraintViolationError(f"gross leverage {weights.abs().sum():.4f} above limit")
     if (weights.abs() > constraints.max_weight + _TOL).any():

@@ -84,6 +84,10 @@ class Factor(Component, ABC):
     """
 
     hypothesis_id: ClassVar[str]
+    precomputable: ClassVar[bool] = False
+    """True only for factors whose ``assert_causal`` test exists: the orchestrator may
+    then compute the panel once on the stage view and slice it at each decision
+    (identical values by construction, verified by that test)."""
 
     @property
     def label(self) -> str:
