@@ -3,7 +3,7 @@
 # asset is only the (non-tradable) benchmark.
 name: equities-base
 seed: 20261024
-data_snapshot: PENDING_BUILD
+data_snapshot: 7bf3f31948ed6974   # built 2026-10-24 by python -m quantlab.equities.build
 
 universe:
   source: data

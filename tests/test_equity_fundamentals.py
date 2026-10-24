@@ -8,6 +8,7 @@ import pytest
 
 from quantlab.equities.fundamentals import (
     asof_panel,
+    drop_scale_outliers,
     instant_records,
     merge_tags,
     shares_records,
@@ -127,3 +128,15 @@ def test_shares_fall_back_for_multiclass_issuers() -> None:
     ]
     out = shares_records(pd.DataFrame(rows))
     assert sorted(out["val"]) == [115.0, 116.0, 117.0, 118.0, 119.0]
+
+
+def test_scale_outliers_dropped() -> None:
+    rec = pd.DataFrame(
+        {
+            "cik": 1,
+            "end": pd.date_range("2015-03-31", periods=6, freq="QE"),
+            "val": [1e9, 1.01e9, 1.02e12, 1.03e9, 1.0e6, 1.04e9],
+            "avail": T("2016-01-01"),
+        }
+    )
+    assert drop_scale_outliers(rec)["val"].tolist() == [1e9, 1.01e9, 1.03e9, 1.04e9]

@@ -99,37 +99,45 @@ def instant_records(facts: pd.DataFrame, tags: Iterable[str]) -> pd.DataFrame:
     return sub[["cik", "end", "val", "filed"]].rename(columns={"filed": "avail"})
 
 
-def shares_records(facts: pd.DataFrame, min_obs: int = 4) -> pd.DataFrame:
-    """Shares outstanding per filing, from the best source available for each company.
+SHARE_SOURCES = (
+    "EntityCommonStockSharesOutstanding",
+    "CommonStockSharesOutstanding",
+    "WeightedAverageNumberOfSharesOutstandingBasic",
+)
 
-    Priority: cover-page dei shares (summed across classes of one filing) ->
-    balance-sheet CommonStockSharesOutstanding -> period weighted-average basic
-    shares. Multi-class issuers report cover-page shares per class, and such
-    dimensional facts are absent from companyfacts, hence the fallbacks.
-    """
 
-    def per_filing(tag: str) -> pd.DataFrame:
-        sub = facts[(facts["tag"] == tag) & (facts["unit"] == "shares")]
-        if tag != "EntityCommonStockSharesOutstanding":
-            sub = first_filed(sub, ["cik", "end"])
-        agg = sub.groupby(["cik", "accn"], as_index=False).agg(
-            val=("val", "sum"), end=("end", "max"), avail=("filed", "min")
-        )
-        return agg[["cik", "end", "val", "avail"]]
+def shares_source_records(facts: pd.DataFrame, tag: str) -> pd.DataFrame:
+    """Per-filing share counts from one tag (cover-page dei shares are summed across
+    the classes of a filing; other tags keep the first-filed value per period)."""
+    sub = facts[(facts["tag"] == tag) & (facts["unit"] == "shares")]
+    if tag != "EntityCommonStockSharesOutstanding":
+        sub = first_filed(sub, ["cik", "end"])
+    agg = sub.groupby(["cik", "accn"], as_index=False).agg(
+        val=("val", "sum"), end=("end", "max"), avail=("filed", "min")
+    )
+    return agg[["cik", "end", "val", "avail"]]
 
-    sources = [
-        per_filing("EntityCommonStockSharesOutstanding"),
-        per_filing("CommonStockSharesOutstanding"),
-        per_filing("WeightedAverageNumberOfSharesOutstandingBasic"),
+
+def drop_scale_outliers(records: pd.DataFrame, max_ratio: float = 10.0) -> pd.DataFrame:
+    """Drop values more than ``max_ratio`` x away from the company's median.
+
+    Apply AFTER converting to today's split units, so genuine split-driven jumps
+    are not mistaken for XBRL scaling errors (e.g. shares tagged x1000)."""
+    if records.empty:
+        return records
+    logv = np.log10(records["val"].where(records["val"] > 0))
+    med = logv.groupby(records["cik"]).transform("median")
+    keep = ((logv - med).abs() <= np.log10(max_ratio)).fillna(False)
+    out: pd.DataFrame = records[keep.to_numpy()]
+    return out
+
+
+def shares_records(facts: pd.DataFrame) -> pd.DataFrame:
+    """All share-count records with a ``source`` rank (0 = preferred)."""
+    parts = [
+        shares_source_records(facts, tag).assign(source=i) for i, tag in enumerate(SHARE_SOURCES)
     ]
-    chosen: dict[int, pd.DataFrame] = {}
-    for src in sources:
-        counts = src.groupby("cik").size()
-        for cik in counts[counts >= min_obs].index:
-            chosen.setdefault(int(cik), src[src["cik"] == cik])
-    if not chosen:
-        return pd.DataFrame(columns=["cik", "end", "val", "avail"])
-    return pd.concat(chosen.values(), ignore_index=True)
+    return pd.concat(parts, ignore_index=True)
 
 
 def float_records(facts: pd.DataFrame) -> pd.DataFrame:

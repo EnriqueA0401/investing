@@ -297,3 +297,18 @@ used):
      shows "$12 trillion"). Only the count measure is used, as planned.
 3. **Latent bug in the price cache:** it was indexed by chunk position and would have silently
    dropped tickers if the candidate list changed. It is now keyed by content.
+4. **Absurd market caps** (STX $17,659T, HBAN $9T): XBRL scale errors in share counts. *Fix:*
+   discard values more than 10× away from the company's median, after converting to today's split
+   units so real splits don't look like errors.
+5. **Share counts with gaps** (BRK-B, F and NKE only 24–60 months; Visa missing). *Fix:* combine
+   sources **date by date** (cover page > balance sheet > weighted average > float/price) instead of
+   choosing one source per company. Visa now has full history; its float-implied market cap
+   understates the real one, but that only affects its rank.
+6. Still missing: Google before its 2015/16 reorganization (name change, not linked), UA, FOXA and
+   NWSA (shares reported only per class).
+
+**Final snapshot:** `7bf3f31948ed6974` (123 MB).
+- 1 721 names passed through the universe.
+- Coverage of the true top 1000: 61% in 2012, 66% in 2015, 75% in 2018, 84% in 2021, 86% in 2022.
+- *Side effect of survivorship:* our universe goes deeper than the real Russell 1000. The 1000th
+  name is worth $0.66B in 2012, against ~$1.5–2B in reality, because survivors fill the gaps.

@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 from quantlab.components.vendors import cash_return_from_rate, fetch_fred_series
@@ -54,6 +55,55 @@ def candidate_tickers(facts: pd.DataFrame, tmap: pd.DataFrame, cfg: BuildConfig)
     return cand[["cik", "ticker", "name", "exchange"]].reset_index(drop=True)
 
 
+def build_shares_panel(
+    facts: pd.DataFrame,
+    cik_to_ticker: dict[int, str],
+    factor_after: pd.DataFrame,
+    close: pd.DataFrame,
+    dates: pd.DatetimeIndex,
+) -> pd.DataFrame:
+    """Month-end shares in today's split units: best available source on each date
+    (cover page > balance sheet > weighted average > float-implied), scale outliers
+    removed."""
+    rec = fundamentals.shares_records(facts[facts["cik"].isin(cik_to_ticker)])
+    rec["ticker"] = rec["cik"].map(cik_to_ticker)
+    rec = prices.to_today_units(rec, factor_after)
+    combined: pd.DataFrame | None = None
+    for src in sorted(rec["source"].unique()):
+        part = fundamentals.drop_scale_outliers(rec[rec["source"] == src])
+        panel = fundamentals.asof_panel(
+            part[["cik", "end", "val", "avail"]], dates, max_age_days=400
+        )
+        combined = panel if combined is None else combined.combine_first(panel)
+    assert combined is not None
+    combined.columns = [cik_to_ticker[int(c)] for c in combined.columns]
+    # Last resort (issuers reporting shares only per class, e.g. Visa): shares implied
+    # by EntityPublicFloat / split-adjusted close at the float date. Already in today's
+    # units because the close is split-adjusted. Understates by insider holdings.
+    flt = fundamentals.float_records(facts[facts["cik"].isin(cik_to_ticker)]).copy()
+    flt["ticker"] = flt["cik"].map(cik_to_ticker)
+    px = close.reindex(close.index.union(pd.DatetimeIndex(flt["end"].unique()))).ffill()
+    px_arr = px.to_numpy(dtype=float)
+    row_of = {d: i for i, d in enumerate(px.index)}
+    col_of = {t: j for j, t in enumerate(px.columns)}
+    prices_at = np.array(
+        [
+            px_arr[row_of[e], col_of[t]] if t in col_of else np.nan
+            for e, t in zip(flt["end"], flt["ticker"], strict=True)
+        ]
+    )
+    flt["val"] = flt["val"].to_numpy(dtype=float) / np.where(prices_at > 0, prices_at, np.nan)
+    implied = fundamentals.asof_panel(
+        fundamentals.drop_scale_outliers(
+            flt.dropna(subset=["val"])[["cik", "end", "val", "avail"]]
+        ),
+        dates,
+        max_age_days=550,
+    )
+    implied.columns = [cik_to_ticker[int(c)] for c in implied.columns]
+    return combined.combine_first(implied)
+
+
 def build(cfg: BuildConfig) -> str:  # noqa: PLR0915 - linear, documented build recipe
     edgar_dir = cfg.raw_dir / "edgar"
     edgar.build_facts_table(edgar_dir)
@@ -91,11 +141,9 @@ def build(cfg: BuildConfig) -> str:  # noqa: PLR0915 - linear, documented build 
     # PIT shares in today's split units -> monthly market caps -> membership.
     trading = pd.DatetimeIndex(panels["close"].index)
     dates = universe.month_end_dates(trading)
-    sh = fundamentals.shares_records(facts[facts["cik"].isin(cik_to_ticker)])
-    sh["ticker"] = sh["cik"].map(cik_to_ticker)
-    sh = prices.to_today_units(sh, panels["split_factor_after"])
-    shares_panel = fundamentals.asof_panel(sh.drop(columns="ticker"), dates, max_age_days=200)
-    shares_panel.columns = [cik_to_ticker[c] for c in shares_panel.columns]
+    shares_panel = build_shares_panel(
+        facts, cik_to_ticker, panels["split_factor_after"], panels["close"], dates
+    )
     mcap = universe.monthly_market_cap(shares_panel, panels["close"])
     members = universe.reconstitute(mcap, panels["close"], size=cfg.universe_size)
     ever = members.columns[members.any()]
