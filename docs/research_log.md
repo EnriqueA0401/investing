@@ -230,3 +230,48 @@ Trials en el ledger tras la robustez: 49 (15 de selección + 34 de robustez).
   1. Las reglas ganadoras en research ganaban por reducir riesgo, no por alfa (t = 1.2).
   2. El ML pareció funcionar en CPCV y no funciona en walk-forward estricto.
   3. Elegir al ganador del backtest es peor que promediar todas las reglas.
+
+---
+
+# Estudio 2: acciones long/short (iniciado 2026-10-24)
+
+## Fase 0: alcance (decisiones del usuario)
+- Datos gratuitos con mitigación del sesgo de supervivencia.
+- Universo tipo Russell 1000.
+- Long/short neutral a mercado.
+- Rebalanceo mensual con 30–50 nombres por lado.
+
+**Avisos dados al usuario antes de empezar:**
+- yfinance no tiene empresas deslistadas. Se comprobó: TWTR, ATVI, XLNX, CELG, SIVB y BBBY no
+  tienen precio.
+- No hay membresía histórica del Russell gratuita: iShares bloquea sus holdings históricos.
+- "Los mejores resultados" no puede ser el objetivo. El objetivo es el mejor resultado *verificado*.
+
+## Fase 1: datos
+- Volcado completo de EDGAR companyfacts (1.4 GB, 20 501 entidades). Se extrajeron 10.5 M hechos de
+  15 252 empresas, de 2009 a 2026, con su fecha de presentación.
+- **Incidencia:** la primera extracción acumulaba todo en memoria (~14 GB proyectados sobre 15 GB
+  disponibles). Se detuvo y se reescribió para volcar a parquet por bloques.
+- **Fundamentales PIT:**
+  - Primer valor reportado por periodo (se ignoran las reexpresiones).
+  - Usable el día siguiente a la presentación.
+  - TTM = FY + YTD − YTD del año previo.
+  - Datos con más de 15 meses de antigüedad se descartan.
+- **Capitalización:** acciones de la portada (dei) convertidas a las unidades de split de hoy ×
+  precio ajustado por splits.
+- **Universo:** el top 1000 por capitalización el último día de mayo, vigente de julio a junio.
+- **Candidatos:** empresas que cotizan hoy en NYSE, Nasdaq o CBOE con public float ≥ $500M en algún
+  momento. Son 2 691; hay precio para 2 681. Pasaron por el universo 1 686 nombres distintos.
+- **Sectores:** SIC de EDGAR mapeado a Fama-French 12 (tabla Siccodes12 verificada).
+
+## Fase 2: pre-registro
+Commit `1ccfcd2`, con 0 trials de acciones en el ledger:
+- 11 configuraciones.
+- Criterios: DSR, estabilidad, PBO y un **arrastre de supervivencia definido de antemano**.
+- Clasificación alfa / prima conocida (FF5 + UMD).
+
+Notas de ingeniería:
+- Al añadir campos de configuración se protegieron los hashes del estudio de ETFs ya registrados
+  (test de regresión).
+- Los factores con test de causalidad se precomputan una sola vez. Es equivalente por construcción
+  y evita O(T²).

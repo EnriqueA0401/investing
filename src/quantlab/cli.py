@@ -135,6 +135,23 @@ def _cmd_oos_vs(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_validate_equity(args: argparse.Namespace) -> int:
+    import pandas as pd  # noqa: PLC0415
+
+    from quantlab.equities.analysis import evaluate_equity_study  # noqa: PLC0415
+    from quantlab.equities.sources import french_daily_factors  # noqa: PLC0415
+
+    study = load_study(args.study)
+    hashes = {c.config_hash() for c in study.configs.values()}
+    coverage = pd.read_csv(Path(args.coverage))
+    verdict = evaluate_equity_study(
+        study.output_dir, TrialLedger(Path(args.ledger)), hashes, coverage, french_daily_factors()
+    )
+    (study.output_dir / "validation.json").write_text(verdict.to_json())
+    print(verdict.to_json())
+    return 0
+
+
 def _cmd_trials(args: argparse.Namespace) -> int:
     ledger = TrialLedger(Path(args.ledger))
     print(
@@ -205,6 +222,12 @@ def main(argv: Sequence[str] | None = None) -> int:  # noqa: PLR0915 - flat argp
     ob.add_argument("--benchmark", default="SPY")
     ob.add_argument("--figure", default="docs/report/figures/oos_pnl_vs_spy.png")
     ob.set_defaults(func=_cmd_oos_vs)
+
+    ve = sub.add_parser("validate-equity-study", help="equity study pre-registered criteria")
+    ve.add_argument("--study", default="configs/equities/study.yaml")
+    ve.add_argument("--coverage", default="research/results/equity_data/survivorship_coverage.csv")
+    ve.add_argument("--ledger", default="research/trials.jsonl")
+    ve.set_defaults(func=_cmd_validate_equity)
 
     t = sub.add_parser("trials", help="multiple-testing trial counts from the ledger")
     t.add_argument("--ledger", default="research/trials.jsonl")
